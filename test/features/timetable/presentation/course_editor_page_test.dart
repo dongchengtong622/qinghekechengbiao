@@ -11,10 +11,7 @@ void main() {
   }) {
     return tester.pumpWidget(
       MaterialApp(
-        home: CourseEditorPage(
-          initialCourse: initialCourse,
-          onSave: onSave,
-        ),
+        home: CourseEditorPage(initialCourse: initialCourse, onSave: onSave),
       ),
     );
   }
@@ -28,7 +25,9 @@ void main() {
     expect(find.text('请输入课程名称'), findsOneWidget);
   });
 
-  testWidgets('rejects an end section before the start section', (tester) async {
+  testWidgets('rejects an end section before the start section', (
+    tester,
+  ) async {
     await pumpEditor(tester, onSave: (_) async {});
     await tester.enterText(find.byKey(const Key('course_name')), '高等数学');
     await tester.enterText(find.byKey(const Key('start_section')), '4');
@@ -74,11 +73,7 @@ void main() {
       ],
     );
 
-    await pumpEditor(
-      tester,
-      initialCourse: existing,
-      onSave: (_) async {},
-    );
+    await pumpEditor(tester, initialCourse: existing, onSave: (_) async {});
 
     expect(find.widgetWithText(TextFormField, '高等数学'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, '陈老师'), findsOneWidget);
