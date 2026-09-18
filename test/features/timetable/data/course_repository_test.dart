@@ -1,4 +1,3 @@
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qinghe_timetable/features/timetable/data/app_database.dart';
 import 'package:qinghe_timetable/features/timetable/data/cdcas_kingo_importer.dart';
@@ -137,18 +136,21 @@ void main() {
       );
     }
 
-    test('first import inserts school courses and activates semester', () async {
-      final summary = await repository.importTimetable(
-        preview(warnings: const ['一条可恢复提示']),
-      );
+    test(
+      'first import inserts school courses and activates semester',
+      () async {
+        final summary = await repository.importTimetable(
+          preview(warnings: const ['一条可恢复提示']),
+        );
 
-      expect(summary.inserted, 1);
-      expect(summary.updated, 0);
-      expect(summary.removed, 0);
-      expect(summary.warnings, const ['一条可恢复提示']);
-      expect((await repository.watchActiveSemester().first).id, semester.id);
-      expect(await repository.watchCourses().first, hasLength(1));
-    });
+        expect(summary.inserted, 1);
+        expect(summary.updated, 0);
+        expect(summary.removed, 0);
+        expect(summary.warnings, const ['一条可恢复提示']);
+        expect((await repository.watchActiveSemester().first).id, semester.id);
+        expect(await repository.watchCourses().first, hasLength(1));
+      },
+    );
 
     test('idempotent re-import reports no changes', () async {
       final import = preview();
@@ -212,10 +214,9 @@ void main() {
         throwsA(isA<ArgumentError>()),
       );
 
-      expect(
-        (await repository.watchCourses().first).map((item) => item.id),
-        ['manual-course'],
-      );
+      expect((await repository.watchCourses().first).map((item) => item.id), [
+        'manual-course',
+      ]);
     });
 
     test('rolls back all changes when a course insert fails', () async {
