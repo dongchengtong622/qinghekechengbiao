@@ -1,4 +1,6 @@
-import '../lib/features/timetable/domain/models.dart';
+import 'dart:io';
+
+import 'package:qinghe_timetable/features/timetable/domain/models.dart';
 
 void main() {
   final semester = Semester(
@@ -21,5 +23,5 @@ void main() {
   assert(oddSession.occursInWeek(3));
   assert(!oddSession.occursInWeek(4));
 
-  print('Domain smoke tests passed.');
+  stdout.writeln('Domain smoke tests passed.');
 }
