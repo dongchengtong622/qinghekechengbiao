@@ -68,9 +68,11 @@ class CdcasKingoImporter implements TimetableImporter {
     final parsed = <_ParsedSession>[];
     final warnings = <String>[];
     final rows = tableMatch.table.querySelectorAll('tr');
-    for (var rowIndex = tableMatch.headerRow + 1;
-        rowIndex < rows.length;
-        rowIndex++) {
+    for (
+      var rowIndex = tableMatch.headerRow + 1;
+      rowIndex < rows.length;
+      rowIndex++
+    ) {
       final cells = rows[rowIndex].querySelectorAll('td, th');
       if (cells.isEmpty) continue;
       final rowSections = _sectionsFrom(_cellLines(cells.first));
@@ -99,7 +101,9 @@ class CdcasKingoImporter implements TimetableImporter {
     final semester = _semester(document, tableMatch.table);
     final grouped = <String, List<_ParsedSession>>{};
     for (final item in parsed) {
-      grouped.putIfAbsent('${item.name}\u0000${item.teacher}', () => []).add(item);
+      grouped
+          .putIfAbsent('${item.name}\u0000${item.teacher}', () => [])
+          .add(item);
     }
 
     final courses = <Course>[];
@@ -164,9 +168,11 @@ class CdcasKingoImporter implements TimetableImporter {
 
     final name = lines.first;
     if (name.length > 80 || _weekRange.hasMatch(name)) return null;
-    final details = lines.skip(1).where(
-      (line) => !_weekRange.hasMatch(line) && !_sectionRange.hasMatch(line),
-    );
+    final details = lines
+        .skip(1)
+        .where(
+          (line) => !_weekRange.hasMatch(line) && !_sectionRange.hasMatch(line),
+        );
     var teacher = '';
     var room = '';
     for (final detail in details) {
@@ -218,7 +224,10 @@ class CdcasKingoImporter implements TimetableImporter {
     for (final line in lines) {
       final match = _sectionRange.firstMatch(line);
       if (match != null) {
-        return (start: int.parse(match.group(1)!), end: int.parse(match.group(2)!));
+        return (
+          start: int.parse(match.group(1)!),
+          end: int.parse(match.group(2)!),
+        );
       }
     }
     return null;
@@ -240,9 +249,8 @@ class CdcasKingoImporter implements TimetableImporter {
 
   Semester _semester(Document document, Element table) {
     final match = _semesterPattern.firstMatch(document.body?.text ?? '');
-    final start = DateTime.tryParse(
-          table.attributes['data-first-week-start'] ?? '',
-        ) ??
+    final start =
+        DateTime.tryParse(table.attributes['data-first-week-start'] ?? '') ??
         DateTime(2026, 9, 7);
     final totalWeeks =
         int.tryParse(table.attributes['data-total-weeks'] ?? '') ?? 18;
