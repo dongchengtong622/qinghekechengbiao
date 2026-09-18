@@ -2,7 +2,22 @@ import 'package:drift/drift.dart';
 
 import '../domain/models.dart';
 import 'app_database.dart';
+import 'cdcas_kingo_importer.dart';
 import 'sample_schedule.dart';
+
+class ImportSummary {
+  const ImportSummary({
+    required this.inserted,
+    required this.updated,
+    required this.removed,
+    required this.warnings,
+  });
+
+  final int inserted;
+  final int updated;
+  final int removed;
+  final List<String> warnings;
+}
 
 class CourseRepository {
   CourseRepository(this.database);
@@ -97,6 +112,90 @@ class CourseRepository {
     return database.transaction(() => _saveCourse(course));
   }
 
+  Future<ImportSummary> importTimetable(ImportPreview preview) {
+    if (preview.courses.isEmpty) {
+      throw ArgumentError('courses must not be empty');
+    }
+    return database.transaction(() async {
+      await database
+          .update(database.semesterRows)
+          .write(const SemesterRowsCompanion(isActive: Value(false)));
+      await database
+          .into(database.semesterRows)
+          .insertOnConflictUpdate(
+            SemesterRowsCompanion.insert(
+              id: preview.semester.id,
+              name: preview.semester.name,
+              firstWeekStart: preview.semester.firstWeekStart,
+              totalWeeks: preview.semester.totalWeeks,
+              isActive: const Value(true),
+            ),
+          );
+
+      final importedRows = await (database.select(database.courseRows)
+            ..where(
+              (row) =>
+                  row.semesterId.equals(preview.semester.id) &
+                  row.sourceType.equals(CourseSource.cdcasKingo.name),
+            ))
+          .get();
+      final existingByExternalId = <String, Course>{};
+      for (final row in importedRows) {
+        if (row.externalId == null) continue;
+        existingByExternalId[row.externalId!] = await _courseFromRow(row);
+      }
+
+      var inserted = 0;
+      var updated = 0;
+      final retainedIds = <String>{};
+      for (final course in preview.courses) {
+        if (course.source != CourseSource.cdcasKingo ||
+            course.externalId == null ||
+            course.externalId!.isEmpty) {
+          throw ArgumentError(
+            'imported courses require cdcasKingo source and externalId',
+          );
+        }
+        final existing = existingByExternalId[course.externalId!];
+        final normalized = Course(
+          id: existing?.id ?? course.id,
+          semesterId: preview.semester.id,
+          source: CourseSource.cdcasKingo,
+          externalId: course.externalId,
+          name: course.name,
+          teacher: course.teacher,
+          colorValue: course.colorValue,
+          sessions: course.sessions,
+        );
+        retainedIds.add(normalized.id);
+        if (existing == null) {
+          inserted++;
+          await _saveCourse(normalized);
+        } else if (!_sameCourse(existing, normalized)) {
+          updated++;
+          await _saveCourse(normalized);
+        }
+      }
+
+      final staleIds = importedRows
+          .map((row) => row.id)
+          .where((id) => !retainedIds.contains(id))
+          .toList(growable: false);
+      if (staleIds.isNotEmpty) {
+        await (database.delete(
+          database.courseRows,
+        )..where((row) => row.id.isIn(staleIds))).go();
+      }
+
+      return ImportSummary(
+        inserted: inserted,
+        updated: updated,
+        removed: staleIds.length,
+        warnings: List.unmodifiable(preview.warnings),
+      );
+    });
+  }
+
   Future<void> _saveCourse(Course course) async {
     await database
         .into(database.courseRows)
@@ -176,4 +275,44 @@ class CourseRepository {
       room: row.room,
     );
   }
+
+  Future<Course> _courseFromRow(CourseRow row) async {
+    final sessionRows = await (database.select(database.courseSessionRows)
+          ..where((session) => session.courseId.equals(row.id)))
+        .get();
+    return Course(
+      id: row.id,
+      semesterId: row.semesterId,
+      source: CourseSource.values.byName(row.sourceType),
+      externalId: row.externalId,
+      name: row.name,
+      teacher: row.teacher,
+      colorValue: row.colorValue,
+      sessions: sessionRows.map(_sessionFromRow).toList(growable: false),
+    );
+  }
+
+  bool _sameCourse(Course left, Course right) {
+    if (left.id != right.id ||
+        left.semesterId != right.semesterId ||
+        left.source != right.source ||
+        left.externalId != right.externalId ||
+        left.name != right.name ||
+        left.teacher != right.teacher ||
+        left.colorValue != right.colorValue ||
+        left.sessions.length != right.sessions.length) {
+      return false;
+    }
+    final leftSessions = left.sessions.map(_sessionKey).toList()..sort();
+    final rightSessions = right.sessions.map(_sessionKey).toList()..sort();
+    for (var index = 0; index < leftSessions.length; index++) {
+      if (leftSessions[index] != rightSessions[index]) return false;
+    }
+    return true;
+  }
+
+  String _sessionKey(CourseSession session) =>
+      '${session.weekday}|${session.startSection}|${session.endSection}|'
+      '${session.startWeek}|${session.endWeek}|${session.pattern.name}|'
+      '${session.room}';
 }
