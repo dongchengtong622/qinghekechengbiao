@@ -32,7 +32,7 @@ jobs:
       - name: Check formatting
         run: |
           dart format lib test tool
-          git diff --exit-code
+          git diff --exit-code -- '*.dart'
 
       - name: Analyze
         run: flutter analyze
