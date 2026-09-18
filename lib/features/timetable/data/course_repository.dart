@@ -72,15 +72,17 @@ class CourseRepository {
           const SemesterRowsCompanion(isActive: Value(false)),
         );
       }
-      await database.into(database.semesterRows).insertOnConflictUpdate(
-        SemesterRowsCompanion.insert(
-          id: semester.id,
-          name: semester.name,
-          firstWeekStart: semester.firstWeekStart,
-          totalWeeks: semester.totalWeeks,
-          isActive: Value(makeActive),
-        ),
-      );
+      await database
+          .into(database.semesterRows)
+          .insertOnConflictUpdate(
+            SemesterRowsCompanion.insert(
+              id: semester.id,
+              name: semester.name,
+              firstWeekStart: semester.firstWeekStart,
+              totalWeeks: semester.totalWeeks,
+              isActive: Value(makeActive),
+            ),
+          );
     });
   }
 
