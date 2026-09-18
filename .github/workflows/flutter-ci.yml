@@ -26,8 +26,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate Drift code
+        run: dart run build_runner build --delete-conflicting-outputs
+
       - name: Check formatting
-        run: dart format --output=none --set-exit-if-changed lib test
+        run: dart format --output=none --set-exit-if-changed lib test tool
 
       - name: Analyze
         run: flutter analyze
@@ -42,4 +45,3 @@ jobs:
         with:
           name: qinghe-timetable-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
-
