@@ -15,7 +15,7 @@ void main() {
     String id = 'math',
     int weekday = DateTime.monday,
     int startSection = 1,
-    int endSection = 2,
+    int? endSection,
     int startWeek = 1,
     int endWeek = 4,
     WeekPattern pattern = WeekPattern.everyWeek,
@@ -31,7 +31,7 @@ void main() {
         CourseSession(
           weekday: weekday,
           startSection: startSection,
-          endSection: endSection,
+          endSection: endSection ?? startSection + 1,
           startWeek: startWeek,
           endWeek: endWeek,
           pattern: pattern,
