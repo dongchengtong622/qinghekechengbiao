@@ -31,6 +31,8 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
       if (!mounted) return;
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop(summary);
+      } else {
+        setState(() => _importing = false);
       }
     } catch (error) {
       if (!mounted) return;
