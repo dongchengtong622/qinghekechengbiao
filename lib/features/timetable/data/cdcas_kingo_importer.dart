@@ -35,7 +35,7 @@ class CdcasKingoImporter implements TimetableImporter {
   const CdcasKingoImporter();
 
   static final _weekRange = RegExp(
-    r'(?:第)?(\d{1,2})\s*[-–~]\s*(\d{1,2})\s*周?\s*(?:[（(]\s*([单双])\s*周?\s*[)）])?',
+    r'(?:第)?(\d{1,2})\s*[-–~]\s*(\d{1,2})\s*周\s*(?:[（(]\s*([单双])\s*周?\s*[)）])?',
   );
   static final _sectionRange = RegExp(
     r'第?\s*(\d{1,2})\s*[-–~]\s*(\d{1,2})\s*节',
