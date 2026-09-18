@@ -75,8 +75,7 @@ class ReminderPlanner {
   }
 
   int _notificationId(String courseId, CourseSession session, int week) {
-    final value =
-        '$courseId|${session.weekday}|${session.startSection}|$week';
+    final value = '$courseId|${session.weekday}|${session.startSection}|$week';
     var hash = 0x811C9DC5;
     for (final unit in value.codeUnits) {
       hash ^= unit;
