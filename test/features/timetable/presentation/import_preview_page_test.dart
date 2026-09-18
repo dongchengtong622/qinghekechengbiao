@@ -83,10 +83,5 @@ void main() {
 }
 
 Future<ImportSummary> _confirm(ImportPreview preview) async {
-  return const ImportSummary(
-    inserted: 1,
-    updated: 0,
-    removed: 0,
-    warnings: [],
-  );
+  return const ImportSummary(inserted: 1, updated: 0, removed: 0, warnings: []);
 }
