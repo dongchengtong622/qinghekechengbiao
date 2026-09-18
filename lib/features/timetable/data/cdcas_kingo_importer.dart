@@ -211,7 +211,7 @@ class CdcasKingoImporter implements TimetableImporter {
       RegExp(r'<br\s*/?>', caseSensitive: false),
       '\n',
     );
-    final text = html_parser.parseFragment(withNewlines).text;
+    final text = html_parser.parseFragment(withNewlines).text ?? '';
     return text
         .replaceAll('\u00a0', ' ')
         .split(RegExp(r'[\n\r]+'))
