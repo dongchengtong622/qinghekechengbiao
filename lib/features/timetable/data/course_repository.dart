@@ -68,9 +68,9 @@ class CourseRepository {
   Future<void> saveSemester(Semester semester, {bool makeActive = false}) {
     return database.transaction(() async {
       if (makeActive) {
-        await database.update(database.semesterRows).write(
-          const SemesterRowsCompanion(isActive: Value(false)),
-        );
+        await database
+            .update(database.semesterRows)
+            .write(const SemesterRowsCompanion(isActive: Value(false)));
       }
       await database
           .into(database.semesterRows)
