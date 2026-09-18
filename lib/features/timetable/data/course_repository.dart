@@ -10,16 +10,18 @@ class CourseRepository {
   final AppDatabase database;
 
   Stream<List<Course>> watchCourses() {
-    final query = database.select(database.courseRows).join([
-      leftOuterJoin(
-        database.courseSessionRows,
-        database.courseSessionRows.courseId.equalsExp(database.courseRows.id),
-      ),
-    ])
-      ..orderBy([
-        OrderingTerm.asc(database.courseSessionRows.weekday),
-        OrderingTerm.asc(database.courseSessionRows.startSection),
-      ]);
+    final query =
+        database.select(database.courseRows).join([
+          leftOuterJoin(
+            database.courseSessionRows,
+            database.courseSessionRows.courseId.equalsExp(
+              database.courseRows.id,
+            ),
+          ),
+        ])..orderBy([
+          OrderingTerm.asc(database.courseSessionRows.weekday),
+          OrderingTerm.asc(database.courseSessionRows.startSection),
+        ]);
 
     return query.watch().map((rows) {
       final courses = <String, Course>{};
@@ -47,13 +49,19 @@ class CourseRepository {
 
   Future<void> saveCourse(Course course) {
     if (course.sessions.isEmpty) {
-      throw ArgumentError.value(course.sessions, 'sessions', 'must not be empty');
+      throw ArgumentError.value(
+        course.sessions,
+        'sessions',
+        'must not be empty',
+      );
     }
     return database.transaction(() => _saveCourse(course));
   }
 
   Future<void> _saveCourse(Course course) async {
-    await database.into(database.courseRows).insertOnConflictUpdate(
+    await database
+        .into(database.courseRows)
+        .insertOnConflictUpdate(
           CourseRowsCompanion.insert(
             id: course.id,
             name: course.name,
@@ -61,9 +69,9 @@ class CourseRepository {
             colorValue: course.colorValue,
           ),
         );
-    await (database.delete(database.courseSessionRows)
-          ..where((row) => row.courseId.equals(course.id)))
-        .go();
+    await (database.delete(
+      database.courseSessionRows,
+    )..where((row) => row.courseId.equals(course.id))).go();
     await database.batch((batch) {
       batch.insertAll(
         database.courseSessionRows,
@@ -86,24 +94,29 @@ class CourseRepository {
   }
 
   Future<void> deleteCourse(String id) {
-    return (database.delete(database.courseRows)..where((row) => row.id.equals(id)))
-        .go();
+    return (database.delete(
+      database.courseRows,
+    )..where((row) => row.id.equals(id))).go();
   }
 
   Future<void> seedIfEmpty() {
     return database.transaction(() async {
-      final seeded = await (database.select(database.appMetadata)
-            ..where((row) => row.key.equals('sample_seed_v1')))
-          .getSingleOrNull();
+      final seeded = await (database.select(
+        database.appMetadata,
+      )..where((row) => row.key.equals('sample_seed_v1'))).getSingleOrNull();
       if (seeded != null) return;
 
-      final existing = await database.select(database.courseRows).getSingleOrNull();
+      final existing = await database
+          .select(database.courseRows)
+          .getSingleOrNull();
       if (existing == null) {
         for (final course in sampleCourses) {
           await _saveCourse(course);
         }
       }
-      await database.into(database.appMetadata).insert(
+      await database
+          .into(database.appMetadata)
+          .insert(
             AppMetadataCompanion.insert(key: 'sample_seed_v1', value: 'done'),
           );
     });

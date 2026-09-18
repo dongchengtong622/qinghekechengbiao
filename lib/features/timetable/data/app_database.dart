@@ -16,11 +16,8 @@ class CourseRows extends Table {
 
 class CourseSessionRows extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get courseId => text().references(
-    CourseRows,
-    #id,
-    onDelete: KeyAction.cascade,
-  )();
+  TextColumn get courseId =>
+      text().references(CourseRows, #id, onDelete: KeyAction.cascade)();
   IntColumn get weekday => integer()();
   IntColumn get startSection => integer()();
   IntColumn get endSection => integer()();
@@ -54,4 +51,3 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 }
-
