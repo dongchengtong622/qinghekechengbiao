@@ -10,7 +10,7 @@ final sampleSemester = Semester(
 const sampleCourses = <Course>[
   Course(
     id: 'math',
-    semesterId: sampleSemester.id,
+    semesterId: 'sample-2026-autumn',
     source: CourseSource.manual,
     name: '高等数学',
     teacher: '陈老师',
@@ -29,7 +29,7 @@ const sampleCourses = <Course>[
   ),
   Course(
     id: 'design',
-    semesterId: sampleSemester.id,
+    semesterId: 'sample-2026-autumn',
     source: CourseSource.manual,
     name: '设计基础',
     teacher: '李老师',
@@ -48,7 +48,7 @@ const sampleCourses = <Course>[
   ),
   Course(
     id: 'english',
-    semesterId: sampleSemester.id,
+    semesterId: 'sample-2026-autumn',
     source: CourseSource.manual,
     name: '大学英语',
     teacher: '王老师',
