@@ -132,13 +132,13 @@ class CourseRepository {
             ),
           );
 
-      final importedRows = await (database.select(database.courseRows)
-            ..where(
-              (row) =>
-                  row.semesterId.equals(preview.semester.id) &
-                  row.sourceType.equals(CourseSource.cdcasKingo.name),
-            ))
-          .get();
+      final importedRows =
+          await (database.select(database.courseRows)..where(
+                (row) =>
+                    row.semesterId.equals(preview.semester.id) &
+                    row.sourceType.equals(CourseSource.cdcasKingo.name),
+              ))
+              .get();
       final existingByExternalId = <String, Course>{};
       for (final row in importedRows) {
         if (row.externalId == null) continue;
@@ -277,9 +277,9 @@ class CourseRepository {
   }
 
   Future<Course> _courseFromRow(CourseRow row) async {
-    final sessionRows = await (database.select(database.courseSessionRows)
-          ..where((session) => session.courseId.equals(row.id)))
-        .get();
+    final sessionRows = await (database.select(
+      database.courseSessionRows,
+    )..where((session) => session.courseId.equals(row.id))).get();
     return Course(
       id: row.id,
       semesterId: row.semesterId,
