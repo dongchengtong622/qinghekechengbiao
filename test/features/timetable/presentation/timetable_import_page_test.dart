@@ -7,15 +7,22 @@ import 'package:qinghe_timetable/features/timetable/presentation/timetable_impor
 void main() {
   test('school navigation policy only permits the official HTTPS host', () {
     expect(
-      isAllowedSchoolUri(Uri.parse('https://jwc.cdcas.com/jsxsd/xskb/xskb_list.do')),
+      isAllowedSchoolUri(
+        Uri.parse('https://jwc.cdcas.com/jsxsd/xskb/xskb_list.do'),
+      ),
       isTrue,
     );
     expect(isAllowedSchoolUri(Uri.parse('http://jwc.cdcas.com/')), isFalse);
     expect(isAllowedSchoolUri(Uri.parse('https://example.com/')), isFalse);
-    expect(isAllowedSchoolUri(Uri.parse('https://jwc.cdcas.com.evil.test/')), isFalse);
+    expect(
+      isAllowedSchoolUri(Uri.parse('https://jwc.cdcas.com.evil.test/')),
+      isFalse,
+    );
   });
 
-  testWidgets('shows school, privacy notice, and import action', (tester) async {
+  testWidgets('shows school, privacy notice, and import action', (
+    tester,
+  ) async {
     final controller = _FakeSchoolWebController('<html></html>');
     await tester.pumpWidget(
       MaterialApp(
@@ -33,7 +40,9 @@ void main() {
     expect(find.text('教务网页'), findsOneWidget);
   });
 
-  testWidgets('invalid HTML reports an error without importing', (tester) async {
+  testWidgets('invalid HTML reports an error without importing', (
+    tester,
+  ) async {
     var imported = false;
     final controller = _FakeSchoolWebController(
       '<html><body>帐号登录 密码 验证码</body></html>',
