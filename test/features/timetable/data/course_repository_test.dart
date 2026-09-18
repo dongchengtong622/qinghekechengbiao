@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qinghe_timetable/features/timetable/data/app_database.dart';
+import 'package:qinghe_timetable/features/timetable/data/cdcas_kingo_importer.dart';
 import 'package:qinghe_timetable/features/timetable/data/course_repository.dart';
 import 'package:qinghe_timetable/features/timetable/domain/models.dart';
 
@@ -25,14 +26,16 @@ void main() {
   );
 
   Course course({
+    String id = 'math',
     String name = '高等数学',
     String room = 'A302',
     CourseSource source = CourseSource.manual,
     String? externalId,
+    String? semesterId,
   }) {
     return Course(
-      id: 'math',
-      semesterId: semester.id,
+      id: id,
+      semesterId: semesterId ?? semester.id,
       source: source,
       externalId: externalId,
       name: name,
@@ -109,5 +112,138 @@ void main() {
     await repository.seedIfEmpty();
 
     expect(await repository.watchCourses().first, isEmpty);
+  });
+
+  group('importTimetable', () {
+    ImportPreview preview({
+      Semester? targetSemester,
+      List<Course>? courses,
+      List<String> warnings = const [],
+    }) {
+      final selectedSemester = targetSemester ?? semester;
+      return ImportPreview(
+        semester: selectedSemester,
+        courses:
+            courses ??
+            [
+              course(
+                id: 'school-math',
+                semesterId: selectedSemester.id,
+                source: CourseSource.cdcasKingo,
+                externalId: 'K1001',
+              ),
+            ],
+        warnings: warnings,
+      );
+    }
+
+    test('first import inserts school courses and activates semester', () async {
+      final summary = await repository.importTimetable(
+        preview(warnings: const ['一条可恢复提示']),
+      );
+
+      expect(summary.inserted, 1);
+      expect(summary.updated, 0);
+      expect(summary.removed, 0);
+      expect(summary.warnings, const ['一条可恢复提示']);
+      expect((await repository.watchActiveSemester().first).id, semester.id);
+      expect(await repository.watchCourses().first, hasLength(1));
+    });
+
+    test('idempotent re-import reports no changes', () async {
+      final import = preview();
+      await repository.importTimetable(import);
+
+      final summary = await repository.importTimetable(import);
+
+      expect(summary.inserted, 0);
+      expect(summary.updated, 0);
+      expect(summary.removed, 0);
+      expect(await repository.watchCourses().first, hasLength(1));
+    });
+
+    test('updates changed course and removes stale imported course', () async {
+      final stale = course(
+        id: 'school-english',
+        name: '大学英语',
+        source: CourseSource.cdcasKingo,
+        externalId: 'K1002',
+      );
+      await repository.importTimetable(
+        preview(courses: [preview().courses.single, stale]),
+      );
+
+      final changed = course(
+        id: 'different-local-id',
+        room: 'B201',
+        source: CourseSource.cdcasKingo,
+        externalId: 'K1001',
+      );
+      final summary = await repository.importTimetable(
+        preview(courses: [changed]),
+      );
+
+      expect(summary.inserted, 0);
+      expect(summary.updated, 1);
+      expect(summary.removed, 1);
+      final saved = (await repository.watchCourses().first).single;
+      expect(saved.id, 'school-math');
+      expect(saved.sessions.single.room, 'B201');
+    });
+
+    test('preserves manual courses in the imported semester', () async {
+      await repository.saveCourse(course(id: 'manual-course'));
+
+      await repository.importTimetable(preview());
+
+      final courses = await repository.watchCourses().first;
+      expect(courses.map((item) => item.id), contains('manual-course'));
+      expect(
+        courses.where((item) => item.source == CourseSource.cdcasKingo),
+        hasLength(1),
+      );
+    });
+
+    test('rejects a zero-course preview without changing data', () async {
+      await repository.saveCourse(course(id: 'manual-course'));
+
+      expect(
+        () => repository.importTimetable(preview(courses: const [])),
+        throwsA(isA<ArgumentError>()),
+      );
+
+      expect(
+        (await repository.watchCourses().first).map((item) => item.id),
+        ['manual-course'],
+      );
+    });
+
+    test('rolls back all changes when a course insert fails', () async {
+      await repository.importTimetable(preview());
+      final otherSemester = Semester(
+        id: '2027-spring',
+        name: '2027 春季学期',
+        firstWeekStart: DateTime(2027, 2, 22),
+        totalWeeks: 18,
+      );
+      final invalidCourse = course(
+        id: 'invalid',
+        name: '超长课程名' * 20,
+        semesterId: otherSemester.id,
+        source: CourseSource.cdcasKingo,
+        externalId: 'BROKEN',
+      );
+
+      await expectLater(
+        repository.importTimetable(
+          preview(targetSemester: otherSemester, courses: [invalidCourse]),
+        ),
+        throwsA(anything),
+      );
+
+      expect((await repository.watchActiveSemester().first).id, semester.id);
+      final courses = await repository.watchCourses().first;
+      expect(courses.map((item) => item.id), ['school-math']);
+    });
   });
 }
