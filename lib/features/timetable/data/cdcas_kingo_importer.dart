@@ -187,9 +187,9 @@ class CdcasKingoImporter implements TimetableImporter {
     final startWeek = int.parse(weekMatch.group(1)!);
     final endWeek = int.parse(weekMatch.group(2)!);
     var pattern = WeekPattern.everyWeek;
-    if (weekLine.contains(RegExp(r'[（(]\s*单\s*周?\s*[)）]'))) {
+    if (weekLine.contains('单')) {
       pattern = WeekPattern.oddWeeks;
-    } else if (weekLine.contains(RegExp(r'[（(]\s*双\s*周?\s*[)）]'))) {
+    } else if (weekLine.contains('双')) {
       pattern = WeekPattern.evenWeeks;
     }
     return _ParsedSession(
