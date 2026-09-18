@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import '../data/cdcas_kingo_importer.dart';
 import '../data/course_repository.dart';
 
-typedef ConfirmTimetableImport = Future<ImportSummary> Function(
-  ImportPreview preview,
-);
+typedef ConfirmTimetableImport =
+    Future<ImportSummary> Function(ImportPreview preview);
 
 class ImportPreviewPage extends StatefulWidget {
   const ImportPreviewPage({
@@ -36,9 +35,9 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _importing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('导入失败：$error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('导入失败：$error')));
     }
   }
 
@@ -56,9 +55,9 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
         children: [
           Text(
             preview.semester.name,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(
