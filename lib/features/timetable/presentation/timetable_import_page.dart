@@ -48,8 +48,7 @@ class _TimetableImportPageState extends State<TimetableImportPage> {
   @override
   void initState() {
     super.initState();
-    _controller =
-        widget.controllerFactory?.call() ?? WebViewSchoolController();
+    _controller = widget.controllerFactory?.call() ?? WebViewSchoolController();
   }
 
   @override
@@ -67,10 +66,8 @@ class _TimetableImportPageState extends State<TimetableImportPage> {
       if (!mounted) return;
       final summary = await Navigator.of(context).push<ImportSummary>(
         MaterialPageRoute(
-          builder: (_) => ImportPreviewPage(
-            preview: preview,
-            onConfirm: widget.onImport,
-          ),
+          builder: (_) =>
+              ImportPreviewPage(preview: preview, onConfirm: widget.onImport),
         ),
       );
       if (!mounted || summary == null) return;
@@ -91,9 +88,9 @@ class _TimetableImportPageState extends State<TimetableImportPage> {
       ).showSnackBar(SnackBar(content: Text(error.message)));
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('无法读取当前教务页面，请稍后重试。')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('无法读取当前教务页面，请稍后重试。')));
     } finally {
       if (mounted) setState(() => _reading = false);
     }
@@ -102,9 +99,9 @@ class _TimetableImportPageState extends State<TimetableImportPage> {
   Future<void> _logout() async {
     await _controller.clearSession();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('教务登录信息已清除')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('教务登录信息已清除')));
   }
 
   @override
@@ -117,9 +114,7 @@ class _TimetableImportPageState extends State<TimetableImportPage> {
             width: double.infinity,
             color: Theme.of(context).colorScheme.secondaryContainer,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: const Text(
-              '账号、密码和验证码仅提交给学校官网，青禾课表不会保存这些信息。登录后请打开个人课表。',
-            ),
+            child: const Text('账号、密码和验证码仅提交给学校官网，青禾课表不会保存这些信息。登录后请打开个人课表。'),
           ),
           Expanded(child: _controller.buildView()),
           SafeArea(
