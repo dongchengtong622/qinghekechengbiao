@@ -57,6 +57,8 @@ void main() {
   testWidgets('prefills an existing course for editing', (tester) async {
     const existing = Course(
       id: 'math',
+      semesterId: 'sample-2026-autumn',
+      source: CourseSource.manual,
       name: '高等数学',
       teacher: '陈老师',
       colorValue: 0xFF2E7D66,

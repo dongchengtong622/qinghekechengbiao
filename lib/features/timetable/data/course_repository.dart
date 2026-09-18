@@ -37,6 +37,9 @@ class CourseRepository {
         }
         courses[courseRow.id] = Course(
           id: courseRow.id,
+          semesterId: courseRow.semesterId,
+          source: CourseSource.values.byName(courseRow.sourceType),
+          externalId: courseRow.externalId,
           name: courseRow.name,
           teacher: courseRow.teacher,
           colorValue: courseRow.colorValue,
@@ -44,6 +47,40 @@ class CourseRepository {
         );
       }
       return courses.values.toList(growable: false);
+    });
+  }
+
+  Stream<Semester> watchActiveSemester() {
+    final query = database.select(database.semesterRows)
+      ..where((row) => row.isActive.equals(true));
+    return query.watchSingleOrNull().map(
+      (row) => row == null
+          ? sampleSemester
+          : Semester(
+              id: row.id,
+              name: row.name,
+              firstWeekStart: row.firstWeekStart,
+              totalWeeks: row.totalWeeks,
+            ),
+    );
+  }
+
+  Future<void> saveSemester(Semester semester, {bool makeActive = false}) {
+    return database.transaction(() async {
+      if (makeActive) {
+        await database.update(database.semesterRows).write(
+          const SemesterRowsCompanion(isActive: Value(false)),
+        );
+      }
+      await database.into(database.semesterRows).insertOnConflictUpdate(
+        SemesterRowsCompanion.insert(
+          id: semester.id,
+          name: semester.name,
+          firstWeekStart: semester.firstWeekStart,
+          totalWeeks: semester.totalWeeks,
+          isActive: Value(makeActive),
+        ),
+      );
     });
   }
 
@@ -64,6 +101,9 @@ class CourseRepository {
         .insertOnConflictUpdate(
           CourseRowsCompanion.insert(
             id: course.id,
+            semesterId: Value(course.semesterId),
+            sourceType: Value(course.source.name),
+            externalId: Value(course.externalId),
             name: course.name,
             teacher: Value(course.teacher),
             colorValue: course.colorValue,
@@ -110,6 +150,7 @@ class CourseRepository {
           .select(database.courseRows)
           .getSingleOrNull();
       if (existing == null) {
+        await saveSemester(sampleSemester, makeActive: true);
         for (final course in sampleCourses) {
           await _saveCourse(course);
         }

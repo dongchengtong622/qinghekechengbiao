@@ -1,12 +1,16 @@
 enum WeekPattern { everyWeek, oddWeeks, evenWeeks }
 
+enum CourseSource { manual, cdcasKingo }
+
 class Semester {
   const Semester({
+    required this.id,
     required this.name,
     required this.firstWeekStart,
     required this.totalWeeks,
   }) : assert(totalWeeks > 0);
 
+  final String id;
   final String name;
   final DateTime firstWeekStart;
   final int totalWeeks;
@@ -29,13 +33,19 @@ class Semester {
 class Course {
   const Course({
     required this.id,
+    required this.semesterId,
+    required this.source,
     required this.name,
     required this.teacher,
     required this.colorValue,
     required this.sessions,
+    this.externalId,
   });
 
   final String id;
+  final String semesterId;
+  final CourseSource source;
+  final String? externalId;
   final String name;
   final String teacher;
   final int colorValue;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/sample_schedule.dart';
 import '../domain/models.dart';
 
 class CourseEditorPage extends StatefulWidget {
@@ -75,6 +76,9 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
       id:
           widget.initialCourse?.id ??
           'course-${DateTime.now().microsecondsSinceEpoch}',
+      semesterId: widget.initialCourse?.semesterId ?? sampleSemester.id,
+      source: widget.initialCourse?.source ?? CourseSource.manual,
+      externalId: widget.initialCourse?.externalId,
       name: _name.text.trim(),
       teacher: _teacher.text.trim(),
       colorValue: widget.initialCourse?.colorValue ?? 0xFF2E7D66,
