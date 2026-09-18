@@ -17,9 +17,24 @@ void main() {
     await database.close();
   });
 
-  Course course({String name = '高等数学', String room = 'A302'}) {
+  final semester = Semester(
+    id: '2026-autumn',
+    name: '2026 秋季学期',
+    firstWeekStart: DateTime(2026, 9, 7),
+    totalWeeks: 18,
+  );
+
+  Course course({
+    String name = '高等数学',
+    String room = 'A302',
+    CourseSource source = CourseSource.manual,
+    String? externalId,
+  }) {
     return Course(
       id: 'math',
+      semesterId: semester.id,
+      source: source,
+      externalId: externalId,
       name: name,
       teacher: '陈老师',
       colorValue: 0xFF2E7D66,
@@ -38,6 +53,7 @@ void main() {
   }
 
   test('saves and watches a course with its session', () async {
+    await repository.saveSemester(semester, makeActive: true);
     await repository.saveCourse(course());
 
     final courses = await repository.watchCourses().first;
@@ -45,6 +61,21 @@ void main() {
     expect(courses, hasLength(1));
     expect(courses.single.name, '高等数学');
     expect(courses.single.sessions.single.room, 'A302');
+  });
+
+  test('preserves source metadata and active semester', () async {
+    await repository.saveSemester(semester, makeActive: true);
+    await repository.saveCourse(
+      course(source: CourseSource.cdcasKingo, externalId: 'K1001'),
+    );
+
+    final activeSemester = await repository.watchActiveSemester().first;
+    final saved = (await repository.watchCourses().first).single;
+
+    expect(activeSemester.id, semester.id);
+    expect(saved.source, CourseSource.cdcasKingo);
+    expect(saved.externalId, 'K1001');
+    expect(saved.semesterId, semester.id);
   });
 
   test('updates a course and replaces its sessions', () async {
