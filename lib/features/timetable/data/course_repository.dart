@@ -80,6 +80,23 @@ class CourseRepository {
     );
   }
 
+  Stream<bool> watchRemindersEnabled() {
+    final query = database.select(database.appMetadata)
+      ..where((row) => row.key.equals('reminders_enabled'));
+    return query.watchSingleOrNull().map((row) => row?.value == 'true');
+  }
+
+  Future<void> setRemindersEnabled(bool enabled) {
+    return database
+        .into(database.appMetadata)
+        .insertOnConflictUpdate(
+          AppMetadataCompanion.insert(
+            key: 'reminders_enabled',
+            value: enabled.toString(),
+          ),
+        );
+  }
+
   Future<void> saveSemester(Semester semester, {bool makeActive = false}) {
     return database.transaction(() async {
       if (makeActive) {
