@@ -5,9 +5,7 @@ void main(List<String> arguments) {
 }
 
 void configureAndroid(Directory androidDirectory) {
-  _configureGradle(
-    File('${androidDirectory.path}/app/build.gradle.kts'),
-  );
+  _configureGradle(File('${androidDirectory.path}/app/build.gradle.kts'));
   _configureManifest(
     File('${androidDirectory.path}/app/src/main/AndroidManifest.xml'),
   );
@@ -31,16 +29,13 @@ void _configureGradle(File file) {
     );
   }
   if (!source.contains('coreLibraryDesugaring(')) {
-    source = source.replaceFirst(
-      '\nflutter {',
-      '''
+    source = source.replaceFirst('\nflutter {', '''
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
-flutter {''',
-    );
+flutter {''');
   }
   file.writeAsStringSync(source);
 }

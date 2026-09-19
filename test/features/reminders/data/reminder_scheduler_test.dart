@@ -39,30 +39,33 @@ void main() {
     },
   );
 
-  test('serializes concurrent replacements so the latest request wins', () async {
-    gateway.permission = ReminderPermissionState.grantedExact;
-    gateway.pauseFirstSchedule = true;
-    final first = scheduler.replaceAll([reminder]);
-    await gateway.firstScheduleStarted.future;
-    final latestReminder = CourseReminder(
-      id: 84,
-      scheduledAt: DateTime(2026, 9, 22, 7, 55),
-      title: '30分钟后上课：大学英语',
-      body: '第1-2节 · B201 · 李老师',
-      payload: 'english',
-    );
-    final second = scheduler.replaceAll([latestReminder]);
+  test(
+    'serializes concurrent replacements so the latest request wins',
+    () async {
+      gateway.permission = ReminderPermissionState.grantedExact;
+      gateway.pauseFirstSchedule = true;
+      final first = scheduler.replaceAll([reminder]);
+      await gateway.firstScheduleStarted.future;
+      final latestReminder = CourseReminder(
+        id: 84,
+        scheduledAt: DateTime(2026, 9, 22, 7, 55),
+        title: '30分钟后上课：大学英语',
+        body: '第1-2节 · B201 · 李老师',
+        payload: 'english',
+      );
+      final second = scheduler.replaceAll([latestReminder]);
 
-    gateway.releaseFirstSchedule.complete();
-    await Future.wait([first, second]);
+      gateway.releaseFirstSchedule.complete();
+      await Future.wait([first, second]);
 
-    expect(gateway.events, [
-      'cancelAll',
-      'schedule:42:exact',
-      'cancelAll',
-      'schedule:84:exact',
-    ]);
-  });
+      expect(gateway.events, [
+        'cancelAll',
+        'schedule:42:exact',
+        'cancelAll',
+        'schedule:84:exact',
+      ]);
+    },
+  );
 
   test('uses inexact scheduling when exact alarms are unavailable', () async {
     gateway.permission = ReminderPermissionState.grantedInexact;

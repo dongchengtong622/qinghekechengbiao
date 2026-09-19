@@ -98,9 +98,7 @@ class _QingheAppState extends State<QingheApp> with WidgetsBindingObserver {
       return;
     }
     final semester = await repository.watchActiveSemester().first;
-    final courses = await repository
-        .watchCoursesForSemester(semester.id)
-        .first;
+    final courses = await repository.watchCoursesForSemester(semester.id).first;
     await reminderScheduler.replaceAll(
       widget.reminderPlanner.plan(
         semester: semester,

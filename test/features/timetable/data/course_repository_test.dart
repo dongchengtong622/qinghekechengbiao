@@ -248,32 +248,35 @@ void main() {
       expect(saved.sessions.single.room, 'B201');
     });
 
-    test('previews destructive changes without mutating stored courses', () async {
-      final stale = course(
-        id: 'school-english',
-        name: '大学英语',
-        source: CourseSource.cdcasKingo,
-        externalId: 'K1002',
-      );
-      await repository.importTimetable(
-        preview(courses: [preview().courses.single, stale]),
-      );
-      final changed = course(
-        id: 'ignored',
-        room: 'B201',
-        source: CourseSource.cdcasKingo,
-        externalId: 'K1001',
-      );
+    test(
+      'previews destructive changes without mutating stored courses',
+      () async {
+        final stale = course(
+          id: 'school-english',
+          name: '大学英语',
+          source: CourseSource.cdcasKingo,
+          externalId: 'K1002',
+        );
+        await repository.importTimetable(
+          preview(courses: [preview().courses.single, stale]),
+        );
+        final changed = course(
+          id: 'ignored',
+          room: 'B201',
+          source: CourseSource.cdcasKingo,
+          externalId: 'K1001',
+        );
 
-      final summary = await repository.previewTimetableImport(
-        preview(courses: [changed]),
-      );
+        final summary = await repository.previewTimetableImport(
+          preview(courses: [changed]),
+        );
 
-      expect(summary.inserted, 0);
-      expect(summary.updated, 1);
-      expect(summary.removed, 1);
-      expect(await repository.watchCourses().first, hasLength(2));
-    });
+        expect(summary.inserted, 0);
+        expect(summary.updated, 1);
+        expect(summary.removed, 1);
+        expect(await repository.watchCourses().first, hasLength(2));
+      },
+    );
 
     test('preserves manual courses in the imported semester', () async {
       await repository.saveCourse(course(id: 'manual-course'));
@@ -326,9 +329,7 @@ void main() {
 
       expect((await repository.watchActiveSemester().first).id, semester.id);
       final courses = await repository.watchCourses().first;
-      expect(courses.map((item) => item.id), [
-        'cdcas-${semester.id}-K1001',
-      ]);
+      expect(courses.map((item) => item.id), ['cdcas-${semester.id}-K1001']);
     });
   });
 }

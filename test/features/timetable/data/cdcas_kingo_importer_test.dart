@@ -90,7 +90,8 @@ void main() {
   });
 
   test('creates semester-scoped local IDs for the same course', () {
-    String html(String term, String start) => '''
+    String html(String term, String start) =>
+        '''
       <html><body><h1>2026-2027学年第$term学期学生课表</h1>
       <table data-first-week-start="$start" data-total-weeks="18">
       <tr><th>节次</th><th>星期一</th><th>星期二</th>
@@ -125,8 +126,10 @@ void main() {
     expect(english.sessions.single.weekday, DateTime.tuesday);
   });
 
-  test('warns instead of silently importing an ambiguous multi-course cell', () {
-    const html = '''
+  test(
+    'warns instead of silently importing an ambiguous multi-course cell',
+    () {
+      const html = '''
       <html><body><h1>2026-2027学年第1学期学生课表</h1>
       <table data-first-week-start="2026-09-07" data-total-weeks="18">
       <tr><th>节次</th><th>星期一</th><th>星期二</th><th>星期三</th>
@@ -137,9 +140,10 @@ void main() {
       </table></body></html>
     ''';
 
-    final preview = importer.parse(html);
+      final preview = importer.parse(html);
 
-    expect(preview.courses.map((item) => item.name), isNot(contains('高等数学')));
-    expect(preview.warnings, isNotEmpty);
-  });
+      expect(preview.courses.map((item) => item.name), isNot(contains('高等数学')));
+      expect(preview.warnings, isNotEmpty);
+    },
+  );
 }

@@ -94,7 +94,11 @@ class CdcasKingoImporter implements TimetableImporter {
         final rowSpan = int.tryParse(cell.attributes['rowspan'] ?? '') ?? 1;
         final weekday = tableMatch.weekdays[logicalColumn];
         if (rowSpan > 1) {
-          for (var column = logicalColumn; column < logicalColumn + span; column++) {
+          for (
+            var column = logicalColumn;
+            column < logicalColumn + span;
+            column++
+          ) {
             nextOccupied[column] = rowSpan - 1;
           }
         }
@@ -273,10 +277,11 @@ class CdcasKingoImporter implements TimetableImporter {
     final start = DateTime.tryParse(
       table.attributes['data-first-week-start'] ?? '',
     );
-    final totalWeeks = int.tryParse(
-      table.attributes['data-total-weeks'] ?? '',
-    );
-    if (match == null || start == null || totalWeeks == null || totalWeeks < 1) {
+    final totalWeeks = int.tryParse(table.attributes['data-total-weeks'] ?? '');
+    if (match == null ||
+        start == null ||
+        totalWeeks == null ||
+        totalWeeks < 1) {
       throw const TimetableImportException(
         TimetableImportErrorCode.invalidSemester,
         '无法确认学期名称或校历起始日期，请在教务系统打开完整的个人课表后重试。',

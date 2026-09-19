@@ -78,12 +78,11 @@ class _TimetableImportPageState extends State<TimetableImportPage> {
       if (!mounted) return;
       final summary = await Navigator.of(context).push<ImportSummary>(
         MaterialPageRoute(
-          builder: (_) =>
-              ImportPreviewPage(
-                preview: preview,
-                changes: changes,
-                onConfirm: widget.onImport,
-              ),
+          builder: (_) => ImportPreviewPage(
+            preview: preview,
+            changes: changes,
+            onConfirm: widget.onImport,
+          ),
         ),
       );
       if (!mounted || summary == null) return;
@@ -193,8 +192,7 @@ class WebViewSchoolController implements SchoolWebController {
 
   @override
   Future<String> extractHtml() async {
-    final result = await _controller.runJavaScriptReturningResult(
-      '''(() => {
+    final result = await _controller.runJavaScriptReturningResult('''(() => {
         const documents = [document];
         for (const frame of document.querySelectorAll('iframe')) {
           try {
@@ -205,8 +203,7 @@ class WebViewSchoolController implements SchoolWebController {
           [...item.querySelectorAll('table')].some((table) =>
             /星期一/.test(table.innerText) && /星期五/.test(table.innerText)));
         return (timetable || document).documentElement.outerHTML;
-      })()''',
-    );
+      })()''');
     if (result is! String) return result.toString();
     try {
       final decoded = jsonDecode(result);

@@ -47,7 +47,10 @@ flutter {
     expect(firstManifest, contains('android.permission.INTERNET'));
     expect(firstManifest, contains('android.permission.POST_NOTIFICATIONS'));
     expect(firstManifest, contains('android.permission.VIBRATE'));
-    expect(firstManifest, contains('android.permission.RECEIVE_BOOT_COMPLETED'));
+    expect(
+      firstManifest,
+      contains('android.permission.RECEIVE_BOOT_COMPLETED'),
+    );
     expect(firstManifest, contains('android.permission.SCHEDULE_EXACT_ALARM'));
     expect(firstManifest, contains('android:label="青禾课表"'));
     expect(firstManifest, contains('ScheduledNotificationBootReceiver'));
