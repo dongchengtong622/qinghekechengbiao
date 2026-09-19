@@ -72,9 +72,9 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       _loading = false;
     });
     if (!accepted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('通知权限未开启，无法启用课程提醒')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('通知权限未开启，无法启用课程提醒')));
     }
   }
 
