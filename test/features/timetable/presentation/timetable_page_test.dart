@@ -44,6 +44,28 @@ void main() {
     expect(edited?.id, 'math');
   });
 
+  testWidgets('exposes import and reminder actions in the header', (tester) async {
+    var imported = false;
+    var remindersOpened = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimetablePage(
+          semester: sampleSemester,
+          courses: sampleCourses,
+          displayWeek: 3,
+          onImport: () => imported = true,
+          onReminders: () => remindersOpened = true,
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('导入课表'));
+    await tester.tap(find.byTooltip('提醒'));
+
+    expect(imported, isTrue);
+    expect(remindersOpened, isTrue);
+  });
+
   testWidgets('confirms before deleting a course', (tester) async {
     Course? deleted;
     await tester.pumpWidget(
