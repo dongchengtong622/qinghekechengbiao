@@ -1,3 +1,5 @@
+enum ReminderPermissionState { grantedExact, grantedInexact, denied }
+
 class CourseReminder {
   const CourseReminder({
     required this.id,
