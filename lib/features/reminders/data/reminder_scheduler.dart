@@ -124,10 +124,7 @@ class FlutterLocalNotificationGateway implements NotificationGateway {
   }
 
   @override
-  Future<void> schedule(
-    CourseReminder reminder, {
-    required bool exact,
-  }) async {
+  Future<void> schedule(CourseReminder reminder, {required bool exact}) async {
     final scheduledAt = reminder.scheduledAt;
     await _plugin.zonedSchedule(
       id: reminder.id,
