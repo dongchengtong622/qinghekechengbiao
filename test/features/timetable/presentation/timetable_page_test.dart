@@ -44,7 +44,9 @@ void main() {
     expect(edited?.id, 'math');
   });
 
-  testWidgets('exposes import and reminder actions in the header', (tester) async {
+  testWidgets('exposes import and reminder actions in the header', (
+    tester,
+  ) async {
     var imported = false;
     var remindersOpened = false;
     await tester.pumpWidget(
