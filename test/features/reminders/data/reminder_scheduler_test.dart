@@ -19,20 +19,23 @@ void main() {
     payload: 'math',
   );
 
-  test('initializes once and cancels old reminders before replacement', () async {
-    gateway.permission = ReminderPermissionState.grantedExact;
+  test(
+    'initializes once and cancels old reminders before replacement',
+    () async {
+      gateway.permission = ReminderPermissionState.grantedExact;
 
-    await scheduler.replaceAll([reminder]);
-    await scheduler.replaceAll([reminder]);
+      await scheduler.replaceAll([reminder]);
+      await scheduler.replaceAll([reminder]);
 
-    expect(gateway.initializeCalls, 1);
-    expect(gateway.events, [
-      'cancelAll',
-      'schedule:42:exact',
-      'cancelAll',
-      'schedule:42:exact',
-    ]);
-  });
+      expect(gateway.initializeCalls, 1);
+      expect(gateway.events, [
+        'cancelAll',
+        'schedule:42:exact',
+        'cancelAll',
+        'schedule:42:exact',
+      ]);
+    },
+  );
 
   test('uses inexact scheduling when exact alarms are unavailable', () async {
     gateway.permission = ReminderPermissionState.grantedInexact;
@@ -50,15 +53,24 @@ void main() {
     expect(gateway.events, ['cancelAll']);
   });
 
-  test('requests permissions only through the explicit request method', () async {
-    gateway.permission = ReminderPermissionState.grantedInexact;
+  test(
+    'requests permissions only through the explicit request method',
+    () async {
+      gateway.permission = ReminderPermissionState.grantedInexact;
 
-    expect(await scheduler.permissionState(), ReminderPermissionState.grantedInexact);
-    expect(gateway.requestCalls, 0);
+      expect(
+        await scheduler.permissionState(),
+        ReminderPermissionState.grantedInexact,
+      );
+      expect(gateway.requestCalls, 0);
 
-    expect(await scheduler.requestPermissions(), ReminderPermissionState.grantedInexact);
-    expect(gateway.requestCalls, 1);
-  });
+      expect(
+        await scheduler.requestPermissions(),
+        ReminderPermissionState.grantedInexact,
+      );
+      expect(gateway.requestCalls, 1);
+    },
+  );
 }
 
 class FakeNotificationGateway implements NotificationGateway {
