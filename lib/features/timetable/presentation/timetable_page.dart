@@ -9,6 +9,8 @@ class TimetablePage extends StatelessWidget {
     required this.courses,
     required this.displayWeek,
     this.onAdd,
+    this.onImport,
+    this.onReminders,
     this.onEdit,
     this.onDelete,
   });
@@ -17,6 +19,8 @@ class TimetablePage extends StatelessWidget {
   final List<Course> courses;
   final int displayWeek;
   final VoidCallback? onAdd;
+  final VoidCallback? onImport;
+  final VoidCallback? onReminders;
   final ValueChanged<Course>? onEdit;
   final ValueChanged<Course>? onDelete;
 
@@ -86,8 +90,18 @@ class TimetablePage extends StatelessWidget {
                         ],
                       ),
                     ),
+                    if (onImport != null)
+                      Tooltip(
+                        message: '导入课表',
+                        child: FilledButton.tonalIcon(
+                          onPressed: onImport,
+                          icon: const Icon(Icons.file_download_outlined),
+                          label: const Text('导入课表'),
+                        ),
+                      ),
+                    const SizedBox(width: 8),
                     IconButton.filledTonal(
-                      onPressed: () {},
+                      onPressed: onReminders,
                       icon: const Icon(Icons.notifications_none_rounded),
                       tooltip: '提醒',
                     ),
