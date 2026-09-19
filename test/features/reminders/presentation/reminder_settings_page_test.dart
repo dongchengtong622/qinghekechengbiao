@@ -1,24 +1,18 @@
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qinghe_timetable/features/reminders/data/reminder_scheduler.dart';
 import 'package:qinghe_timetable/features/reminders/domain/reminder_models.dart';
+import 'package:qinghe_timetable/features/reminders/domain/reminder_settings_repository.dart';
 import 'package:qinghe_timetable/features/reminders/presentation/reminder_settings_page.dart';
-import 'package:qinghe_timetable/features/timetable/data/app_database.dart';
-import 'package:qinghe_timetable/features/timetable/data/course_repository.dart';
 
 void main() {
-  late AppDatabase database;
-  late CourseRepository repository;
+  late FakeReminderSettingsRepository repository;
   late FakeReminderScheduler scheduler;
 
   setUp(() {
-    database = AppDatabase(NativeDatabase.memory());
-    repository = CourseRepository(database);
+    repository = FakeReminderSettingsRepository();
     scheduler = FakeReminderScheduler();
   });
-
-  tearDown(() => database.close());
 
   Future<void> pumpPage(WidgetTester tester) async {
     await tester.pumpWidget(
@@ -83,6 +77,18 @@ void main() {
     expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
     expect(find.textContaining('通知权限未开启'), findsOneWidget);
   });
+}
+
+class FakeReminderSettingsRepository implements ReminderSettingsRepository {
+  bool enabled = false;
+
+  @override
+  Future<void> setRemindersEnabled(bool enabled) async {
+    this.enabled = enabled;
+  }
+
+  @override
+  Stream<bool> watchRemindersEnabled() => Stream.value(enabled);
 }
 
 class FakeReminderScheduler implements ReminderScheduler {
