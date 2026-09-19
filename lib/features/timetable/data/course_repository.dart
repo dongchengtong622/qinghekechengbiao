@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../reminders/domain/reminder_settings_repository.dart';
 import '../domain/models.dart';
 import 'app_database.dart';
 import 'cdcas_kingo_importer.dart';
@@ -19,7 +20,7 @@ class ImportSummary {
   final List<String> warnings;
 }
 
-class CourseRepository {
+class CourseRepository implements ReminderSettingsRepository {
   CourseRepository(this.database);
 
   final AppDatabase database;
@@ -80,12 +81,14 @@ class CourseRepository {
     );
   }
 
+  @override
   Stream<bool> watchRemindersEnabled() {
     final query = database.select(database.appMetadata)
       ..where((row) => row.key.equals('reminders_enabled'));
     return query.watchSingleOrNull().map((row) => row?.value == 'true');
   }
 
+  @override
   Future<void> setRemindersEnabled(bool enabled) {
     return database
         .into(database.appMetadata)
