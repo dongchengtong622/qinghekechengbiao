@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../timetable/data/course_repository.dart';
 import '../data/reminder_scheduler.dart';
 import '../domain/reminder_models.dart';
+import '../domain/reminder_settings_repository.dart';
 
 typedef ReminderSettingChanged = Future<void> Function(bool enabled);
 
@@ -16,7 +16,7 @@ class ReminderSettingsPage extends StatefulWidget {
     required this.onChanged,
   });
 
-  final CourseRepository repository;
+  final ReminderSettingsRepository repository;
   final ReminderScheduler scheduler;
   final ReminderSettingChanged onChanged;
 
