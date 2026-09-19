@@ -81,6 +81,16 @@ void main() {
     expect(saved.semesterId, semester.id);
   });
 
+  test('persists reminder enabled state', () async {
+    expect(await repository.watchRemindersEnabled().first, isFalse);
+
+    await repository.setRemindersEnabled(true);
+    expect(await repository.watchRemindersEnabled().first, isTrue);
+
+    await repository.setRemindersEnabled(false);
+    expect(await repository.watchRemindersEnabled().first, isFalse);
+  });
+
   test('updates a course and replaces its sessions', () async {
     await repository.saveCourse(course());
     await repository.saveCourse(course(name: '高等数学 A', room: 'B201'));
