@@ -22,6 +22,8 @@ jobs:
           flutter create --platforms=android,ios --org com.qinghe --project-name qinghe_timetable .platform_template
           cp -R .platform_template/android ./android
           cp -R .platform_template/ios ./ios
+          sed -i '/<manifest /a\    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.VIBRATE" />\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />' android/app/src/main/AndroidManifest.xml
+          sed -i '/<\/application>/i\        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />\n        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">\n            <intent-filter>\n                <action android:name="android.intent.action.BOOT_COMPLETED" />\n                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />\n                <action android:name="android.intent.action.QUICKBOOT_POWERON" />\n                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />\n            </intent-filter>\n        </receiver>' android/app/src/main/AndroidManifest.xml
 
       - name: Install dependencies
         run: flutter pub get
@@ -38,10 +40,7 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        run: |
-          timeout 2m flutter test test/features/reminders/data/reminder_scheduler_test.dart --reporter expanded
-          timeout 2m flutter test test/features/reminders/presentation/reminder_settings_page_test.dart --reporter expanded
-          timeout 6m flutter test --reporter expanded
+        run: timeout 10m flutter test --reporter expanded
 
       - name: Build Android debug APK
         run: flutter build apk --debug
