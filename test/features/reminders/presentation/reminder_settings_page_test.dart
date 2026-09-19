@@ -75,7 +75,7 @@ void main() {
 
     expect(await repository.watchRemindersEnabled().first, isFalse);
     expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
-    expect(find.textContaining('通知权限未开启'), findsOneWidget);
+    expect(find.text('通知权限未开启，无法启用课程提醒'), findsOneWidget);
   });
 }
 
