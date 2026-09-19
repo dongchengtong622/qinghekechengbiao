@@ -11,7 +11,11 @@ void main() {
   }) {
     return tester.pumpWidget(
       MaterialApp(
-        home: CourseEditorPage(initialCourse: initialCourse, onSave: onSave),
+        home: CourseEditorPage(
+          semesterId: 'active-semester',
+          initialCourse: initialCourse,
+          onSave: onSave,
+        ),
       ),
     );
   }
@@ -52,6 +56,7 @@ void main() {
     expect(saved?.name, '高等数学');
     expect(saved?.teacher, '陈老师');
     expect(saved?.sessions.single.room, 'A302');
+    expect(saved?.semesterId, 'active-semester');
   });
 
   testWidgets('prefills an existing course for editing', (tester) async {
@@ -80,5 +85,53 @@ void main() {
     expect(find.widgetWithText(TextFormField, '高等数学'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, '陈老师'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, 'A302'), findsOneWidget);
+  });
+
+  testWidgets('editing the first session preserves remaining sessions', (
+    tester,
+  ) async {
+    const existing = Course(
+      id: 'math',
+      semesterId: 'active-semester',
+      source: CourseSource.cdcasKingo,
+      externalId: 'K1001',
+      name: '高等数学',
+      teacher: '陈老师',
+      colorValue: 0xFF2E7D66,
+      sessions: [
+        CourseSession(
+          weekday: DateTime.monday,
+          startSection: 1,
+          endSection: 2,
+          startWeek: 1,
+          endWeek: 18,
+          pattern: WeekPattern.everyWeek,
+          room: 'A302',
+        ),
+        CourseSession(
+          weekday: DateTime.wednesday,
+          startSection: 3,
+          endSection: 4,
+          startWeek: 1,
+          endWeek: 18,
+          pattern: WeekPattern.everyWeek,
+          room: 'B201',
+        ),
+      ],
+    );
+    Course? saved;
+    await pumpEditor(
+      tester,
+      initialCourse: existing,
+      onSave: (course) async => saved = course,
+    );
+    await tester.enterText(find.byKey(const Key('room')), 'A305');
+
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    expect(saved?.sessions, hasLength(2));
+    expect(saved?.sessions.first.room, 'A305');
+    expect(saved?.sessions.last.room, 'B201');
   });
 }

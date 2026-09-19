@@ -29,6 +29,7 @@ class AndroidReminderScheduler implements ReminderScheduler {
 
   final NotificationGateway gateway;
   Future<void>? _initialization;
+  Future<void> _replacementQueue = Future.value();
 
   Future<void> _ensureInitialized() {
     return _initialization ??= gateway.initialize();
@@ -41,7 +42,15 @@ class AndroidReminderScheduler implements ReminderScheduler {
   }
 
   @override
-  Future<void> replaceAll(List<CourseReminder> reminders) async {
+  Future<void> replaceAll(List<CourseReminder> reminders) {
+    final replacement = _replacementQueue.then(
+      (_) => _replaceAllNow(List.unmodifiable(reminders)),
+    );
+    _replacementQueue = replacement.catchError((Object _) {});
+    return replacement;
+  }
+
+  Future<void> _replaceAllNow(List<CourseReminder> reminders) async {
     await _ensureInitialized();
     await gateway.cancelAll();
     final permission = await gateway.permissionState();
@@ -60,8 +69,10 @@ class AndroidReminderScheduler implements ReminderScheduler {
 }
 
 class FlutterLocalNotificationGateway implements NotificationGateway {
-  FlutterLocalNotificationGateway({FlutterLocalNotificationsPlugin? plugin})
-    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+  FlutterLocalNotificationGateway({
+    FlutterLocalNotificationsPlugin? plugin,
+    this.onNotificationTap,
+  }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   static const channelId = 'qinghe_course_reminders';
   static const _notificationDetails = NotificationDetails(
@@ -79,6 +90,7 @@ class FlutterLocalNotificationGateway implements NotificationGateway {
   );
 
   final FlutterLocalNotificationsPlugin _plugin;
+  final void Function(String? payload)? onNotificationTap;
   late timezone.Location _shanghai;
 
   AndroidFlutterLocalNotificationsPlugin? get _android => _plugin
@@ -94,6 +106,9 @@ class FlutterLocalNotificationGateway implements NotificationGateway {
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       ),
+      onDidReceiveNotificationResponse: (response) {
+        onNotificationTap?.call(response.payload);
+      },
     );
   }
 

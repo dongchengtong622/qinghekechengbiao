@@ -36,45 +36,58 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
   }
 
   Future<void> _load() async {
-    final enabled = await widget.repository.watchRemindersEnabled().first;
-    final permission = await widget.scheduler.permissionState();
-    if (!mounted) return;
-    setState(() {
-      _enabled = enabled && permission != ReminderPermissionState.denied;
-      _permission = permission;
-      _loading = false;
-    });
+    try {
+      final enabled = await widget.repository.watchRemindersEnabled().first;
+      final permission = await widget.scheduler.permissionState();
+      if (!mounted) return;
+      setState(() {
+        _enabled = enabled && permission != ReminderPermissionState.denied;
+        _permission = permission;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('无法读取提醒状态，请稍后重试')));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Future<void> _setEnabled(bool enabled) async {
     if (_loading) return;
     setState(() => _loading = true);
-    if (!enabled) {
-      await widget.repository.setRemindersEnabled(false);
-      await widget.scheduler.replaceAll(const []);
-      await widget.onChanged(false);
+    try {
+      if (!enabled) {
+        await widget.repository.setRemindersEnabled(false);
+        await widget.scheduler.replaceAll(const []);
+        await widget.onChanged(false);
+        if (!mounted) return;
+        setState(() => _enabled = false);
+        return;
+      }
+
+      final permission = await widget.scheduler.requestPermissions();
+      final accepted = permission != ReminderPermissionState.denied;
+      await widget.repository.setRemindersEnabled(accepted);
+      if (accepted) await widget.onChanged(true);
       if (!mounted) return;
       setState(() {
-        _enabled = false;
-        _loading = false;
+        _enabled = accepted;
+        _permission = permission;
       });
-      return;
-    }
-
-    final permission = await widget.scheduler.requestPermissions();
-    final accepted = permission != ReminderPermissionState.denied;
-    await widget.repository.setRemindersEnabled(accepted);
-    if (accepted) await widget.onChanged(true);
-    if (!mounted) return;
-    setState(() {
-      _enabled = accepted;
-      _permission = permission;
-      _loading = false;
-    });
-    if (!accepted) {
+      if (!accepted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('通知权限未开启，无法启用课程提醒')));
+      }
+    } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('通知权限未开启，无法启用课程提醒')));
+      ).showSnackBar(const SnackBar(content: Text('提醒设置失败，请稍后重试')));
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 

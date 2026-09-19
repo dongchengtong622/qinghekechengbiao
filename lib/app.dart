@@ -30,7 +30,8 @@ class QingheApp extends StatefulWidget {
   State<QingheApp> createState() => _QingheAppState();
 }
 
-class _QingheAppState extends State<QingheApp> {
+class _QingheAppState extends State<QingheApp> with WidgetsBindingObserver {
+  final navigatorKey = GlobalKey<NavigatorState>();
   late final CourseRepository repository;
   late final ReminderScheduler reminderScheduler;
 
@@ -40,20 +41,45 @@ class _QingheAppState extends State<QingheApp> {
     repository = CourseRepository(widget.database);
     reminderScheduler =
         widget.reminderScheduler ??
-        AndroidReminderScheduler(FlutterLocalNotificationGateway());
-    unawaited(repository.seedIfEmpty());
+        AndroidReminderScheduler(
+          FlutterLocalNotificationGateway(
+            onNotificationTap: (_) {
+              navigatorKey.currentState?.popUntil((route) => route.isFirst);
+            },
+          ),
+        );
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_initialize());
+  }
+
+  Future<void> _initialize() async {
+    await repository.seedIfEmpty();
+    await _rescheduleReminders();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_rescheduleReminders());
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     unawaited(widget.database.close());
     super.dispose();
   }
 
-  Future<void> _openEditor(BuildContext context, [Course? course]) {
+  Future<void> _openEditor(
+    BuildContext context,
+    String semesterId, [
+    Course? course,
+  ]) {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => CourseEditorPage(
+          semesterId: semesterId,
           initialCourse: course,
           onSave: (saved) async {
             await repository.saveCourse(saved);
@@ -72,7 +98,9 @@ class _QingheAppState extends State<QingheApp> {
       return;
     }
     final semester = await repository.watchActiveSemester().first;
-    final courses = await repository.watchCourses().first;
+    final courses = await repository
+        .watchCoursesForSemester(semester.id)
+        .first;
     await reminderScheduler.replaceAll(
       widget.reminderPlanner.plan(
         semester: semester,
@@ -88,6 +116,7 @@ class _QingheAppState extends State<QingheApp> {
         builder: (_) => TimetableImportPage(
           importer: const CdcasKingoImporter(),
           onImport: repository.importTimetable,
+          onPreview: repository.previewTimetableImport,
         ),
       ),
     );
@@ -109,6 +138,7 @@ class _QingheAppState extends State<QingheApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: '青禾课表',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
@@ -122,7 +152,9 @@ class _QingheAppState extends State<QingheApp> {
               );
             }
             return StreamBuilder<List<Course>>(
-              stream: repository.watchCourses(),
+              stream: repository.watchCoursesForSemester(
+                semesterSnapshot.data!.id,
+              ),
               builder: (context, courseSnapshot) {
                 if (!courseSnapshot.hasData) {
                   return const Scaffold(
@@ -130,18 +162,24 @@ class _QingheAppState extends State<QingheApp> {
                   );
                 }
                 final semester = semesterSnapshot.data!;
-                return TimetablePage(
-                  semester: semester,
-                  courses: courseSnapshot.data!,
-                  displayWeek: semester.weekFor(DateTime.now()) ?? 1,
-                  onAdd: () => _openEditor(context),
-                  onImport: () => unawaited(_openImport(context)),
-                  onReminders: () => unawaited(_openReminders(context)),
-                  onEdit: (course) => _openEditor(context, course),
-                  onDelete: (course) => unawaited(() async {
-                    await repository.deleteCourse(course.id);
-                    await _rescheduleReminders();
-                  }()),
+                return StreamBuilder<bool>(
+                  stream: repository.watchRemindersEnabled(),
+                  initialData: false,
+                  builder: (context, reminderSnapshot) => TimetablePage(
+                    semester: semester,
+                    courses: courseSnapshot.data!,
+                    displayWeek: semester.weekFor(DateTime.now()) ?? 1,
+                    remindersEnabled: reminderSnapshot.data ?? false,
+                    onAdd: () => _openEditor(context, semester.id),
+                    onImport: () => unawaited(_openImport(context)),
+                    onReminders: () => unawaited(_openReminders(context)),
+                    onEdit: (course) =>
+                        _openEditor(context, semester.id, course),
+                    onDelete: (course) => unawaited(() async {
+                      await repository.deleteCourse(course.id);
+                      await _rescheduleReminders();
+                    }()),
+                  ),
                 );
               },
             );

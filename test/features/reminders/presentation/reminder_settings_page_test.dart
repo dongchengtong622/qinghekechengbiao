@@ -77,6 +77,17 @@ void main() {
     expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
     expect(find.text('通知权限未开启，无法启用课程提醒'), findsOneWidget);
   });
+
+  testWidgets('recovers the switch after a scheduler failure', (tester) async {
+    scheduler.throwOnRequest = true;
+    await pumpPage(tester);
+
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+
+    expect(find.text('提醒设置失败，请稍后重试'), findsOneWidget);
+    expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNotNull);
+  });
 }
 
 class FakeReminderSettingsRepository implements ReminderSettingsRepository {
@@ -95,6 +106,7 @@ class FakeReminderScheduler implements ReminderScheduler {
   ReminderPermissionState state = ReminderPermissionState.denied;
   ReminderPermissionState requestResult = ReminderPermissionState.denied;
   int requestCalls = 0;
+  bool throwOnRequest = false;
 
   @override
   Future<ReminderPermissionState> permissionState() async => state;
@@ -105,6 +117,7 @@ class FakeReminderScheduler implements ReminderScheduler {
   @override
   Future<ReminderPermissionState> requestPermissions() async {
     requestCalls++;
+    if (throwOnRequest) throw StateError('scheduler failed');
     state = requestResult;
     return requestResult;
   }

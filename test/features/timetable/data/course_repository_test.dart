@@ -81,6 +81,20 @@ void main() {
     expect(saved.semesterId, semester.id);
   });
 
+  test('watches only courses in the selected semester', () async {
+    const springId = '2027-spring';
+    await repository.saveCourse(course(id: 'autumn'));
+    await repository.saveCourse(
+      course(id: 'spring', semesterId: springId, name: '线性代数'),
+    );
+
+    final autumn = await repository.watchCoursesForSemester(semester.id).first;
+    final spring = await repository.watchCoursesForSemester(springId).first;
+
+    expect(autumn.map((item) => item.id), ['autumn']);
+    expect(spring.map((item) => item.id), ['spring']);
+  });
+
   test('persists reminder enabled state', () async {
     expect(await repository.watchRemindersEnabled().first, isFalse);
 
@@ -175,6 +189,36 @@ void main() {
       expect(await repository.watchCourses().first, hasLength(1));
     });
 
+    test('keeps the same external course in different semesters', () async {
+      final spring = Semester(
+        id: '2027-spring',
+        name: '2027 春季学期',
+        firstWeekStart: DateTime(2027, 2, 22),
+        totalWeeks: 18,
+      );
+      await repository.importTimetable(preview());
+      await repository.importTimetable(
+        preview(
+          targetSemester: spring,
+          courses: [
+            course(
+              id: 'school-math-spring',
+              semesterId: spring.id,
+              source: CourseSource.cdcasKingo,
+              externalId: 'K1001',
+            ),
+          ],
+        ),
+      );
+
+      final all = await repository.watchCourses().first;
+      expect(all, hasLength(2));
+      expect(all.map((item) => item.semesterId).toSet(), {
+        semester.id,
+        spring.id,
+      });
+    });
+
     test('updates changed course and removes stale imported course', () async {
       final stale = course(
         id: 'school-english',
@@ -200,8 +244,35 @@ void main() {
       expect(summary.updated, 1);
       expect(summary.removed, 1);
       final saved = (await repository.watchCourses().first).single;
-      expect(saved.id, 'school-math');
+      expect(saved.id, 'cdcas-${semester.id}-K1001');
       expect(saved.sessions.single.room, 'B201');
+    });
+
+    test('previews destructive changes without mutating stored courses', () async {
+      final stale = course(
+        id: 'school-english',
+        name: '大学英语',
+        source: CourseSource.cdcasKingo,
+        externalId: 'K1002',
+      );
+      await repository.importTimetable(
+        preview(courses: [preview().courses.single, stale]),
+      );
+      final changed = course(
+        id: 'ignored',
+        room: 'B201',
+        source: CourseSource.cdcasKingo,
+        externalId: 'K1001',
+      );
+
+      final summary = await repository.previewTimetableImport(
+        preview(courses: [changed]),
+      );
+
+      expect(summary.inserted, 0);
+      expect(summary.updated, 1);
+      expect(summary.removed, 1);
+      expect(await repository.watchCourses().first, hasLength(2));
     });
 
     test('preserves manual courses in the imported semester', () async {
@@ -255,7 +326,9 @@ void main() {
 
       expect((await repository.watchActiveSemester().first).id, semester.id);
       final courses = await repository.watchCourses().first;
-      expect(courses.map((item) => item.id), ['school-math']);
+      expect(courses.map((item) => item.id), [
+        'cdcas-${semester.id}-K1001',
+      ]);
     });
   });
 }

@@ -16,6 +16,8 @@ bool isAllowedSchoolUri(Uri uri) {
 abstract interface class SchoolWebController {
   Widget buildView();
 
+  Future<Uri?> currentUri();
+
   Future<String> extractHtml();
 
   Future<void> clearSession();
@@ -30,11 +32,13 @@ class TimetableImportPage extends StatefulWidget {
     super.key,
     required this.importer,
     required this.onImport,
+    required this.onPreview,
     this.controllerFactory,
   });
 
   final TimetableImporter importer;
   final Future<ImportSummary> Function(ImportPreview preview) onImport;
+  final Future<ImportSummary> Function(ImportPreview preview) onPreview;
   final SchoolWebControllerFactory? controllerFactory;
 
   @override
@@ -61,13 +65,25 @@ class _TimetableImportPageState extends State<TimetableImportPage> {
     if (_reading) return;
     setState(() => _reading = true);
     try {
+      final currentUri = await _controller.currentUri();
+      if (currentUri == null || !isAllowedSchoolUri(currentUri)) {
+        throw const TimetableImportException(
+          TimetableImportErrorCode.notTimetablePage,
+          '当前页面不在学校官网，已停止读取课表。',
+        );
+      }
       final html = await _controller.extractHtml();
       final preview = widget.importer.parse(html);
+      final changes = await widget.onPreview(preview);
       if (!mounted) return;
       final summary = await Navigator.of(context).push<ImportSummary>(
         MaterialPageRoute(
           builder: (_) =>
-              ImportPreviewPage(preview: preview, onConfirm: widget.onImport),
+              ImportPreviewPage(
+                preview: preview,
+                changes: changes,
+                onConfirm: widget.onImport,
+              ),
         ),
       );
       if (!mounted || summary == null) return;
@@ -170,9 +186,26 @@ class WebViewSchoolController implements SchoolWebController {
   Widget buildView() => WebViewWidget(controller: _controller);
 
   @override
+  Future<Uri?> currentUri() async {
+    final value = await _controller.currentUrl();
+    return value == null ? null : Uri.tryParse(value);
+  }
+
+  @override
   Future<String> extractHtml() async {
     final result = await _controller.runJavaScriptReturningResult(
-      'document.documentElement.outerHTML',
+      '''(() => {
+        const documents = [document];
+        for (const frame of document.querySelectorAll('iframe')) {
+          try {
+            if (frame.contentDocument) documents.push(frame.contentDocument);
+          } catch (_) {}
+        }
+        const timetable = documents.find((item) =>
+          [...item.querySelectorAll('table')].some((table) =>
+            /星期一/.test(table.innerText) && /星期五/.test(table.innerText)));
+        return (timetable || document).documentElement.outerHTML;
+      })()''',
     );
     if (result is! String) return result.toString();
     try {

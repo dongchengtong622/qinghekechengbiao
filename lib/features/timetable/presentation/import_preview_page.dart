@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/cdcas_kingo_importer.dart';
 import '../data/course_repository.dart';
+import '../domain/models.dart';
 
 typedef ConfirmTimetableImport =
     Future<ImportSummary> Function(ImportPreview preview);
@@ -10,10 +11,12 @@ class ImportPreviewPage extends StatefulWidget {
   const ImportPreviewPage({
     super.key,
     required this.preview,
+    required this.changes,
     required this.onConfirm,
   });
 
   final ImportPreview preview;
+  final ImportSummary changes;
   final ConfirmTimetableImport onConfirm;
 
   @override
@@ -66,6 +69,12 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
             '${preview.courses.length} 门课程 · $sessionCount 个上课时段',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
+          const SizedBox(height: 8),
+          Text(
+            '将新增 ${widget.changes.inserted} · 更新 ${widget.changes.updated} · '
+            '移除 ${widget.changes.removed}',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
           if (preview.warnings.isNotEmpty) ...[
             const SizedBox(height: 18),
             Card(
@@ -89,9 +98,10 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
               child: ListTile(
                 title: Text(course.name),
                 subtitle: Text(
-                  '${course.teacher.isEmpty ? '教师待确认' : course.teacher} · '
-                  '${course.sessions.length} 个时段',
+                  '${course.teacher.isEmpty ? '教师待确认' : course.teacher}\n'
+                  '${course.sessions.map(_sessionDescription).join('\n')}',
                 ),
+                isThreeLine: course.sessions.length > 1,
               ),
             ),
           const SizedBox(height: 20),
@@ -108,5 +118,12 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
         ],
       ),
     );
+  }
+
+  String _sessionDescription(CourseSession session) {
+    final weekday = '一二三四五六日'[session.weekday - 1];
+    final room = session.room.isEmpty ? '教室待确认' : session.room;
+    return '周$weekday 第${session.startSection}-${session.endSection}节 · '
+        '${session.startWeek}-${session.endWeek}周 · $room';
   }
 }

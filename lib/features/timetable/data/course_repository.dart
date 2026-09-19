@@ -26,8 +26,20 @@ class CourseRepository implements ReminderSettingsRepository {
   final AppDatabase database;
 
   Stream<List<Course>> watchCourses() {
+    return _watchCourses();
+  }
+
+  Stream<List<Course>> watchCoursesForSemester(String semesterId) {
+    return _watchCourses(semesterId: semesterId);
+  }
+
+  Stream<List<Course>> _watchCourses({String? semesterId}) {
+    final courseQuery = database.select(database.courseRows);
+    if (semesterId != null) {
+      courseQuery.where((row) => row.semesterId.equals(semesterId));
+    }
     final query =
-        database.select(database.courseRows).join([
+        courseQuery.join([
           leftOuterJoin(
             database.courseSessionRows,
             database.courseSessionRows.courseId.equalsExp(
@@ -178,7 +190,9 @@ class CourseRepository implements ReminderSettingsRepository {
         }
         final existing = existingByExternalId[course.externalId!];
         final normalized = Course(
-          id: existing?.id ?? course.id,
+          id:
+              existing?.id ??
+              'cdcas-${preview.semester.id}-${course.externalId}',
           semesterId: preview.semester.id,
           source: CourseSource.cdcasKingo,
           externalId: course.externalId,
@@ -214,6 +228,59 @@ class CourseRepository implements ReminderSettingsRepository {
         warnings: List.unmodifiable(preview.warnings),
       );
     });
+  }
+
+  Future<ImportSummary> previewTimetableImport(ImportPreview preview) async {
+    if (preview.courses.isEmpty) {
+      throw ArgumentError('courses must not be empty');
+    }
+    final importedRows =
+        await (database.select(database.courseRows)..where(
+              (row) =>
+                  row.semesterId.equals(preview.semester.id) &
+                  row.sourceType.equals(CourseSource.cdcasKingo.name),
+            ))
+            .get();
+    final existingByExternalId = <String, Course>{};
+    for (final row in importedRows) {
+      if (row.externalId != null) {
+        existingByExternalId[row.externalId!] = await _courseFromRow(row);
+      }
+    }
+    var inserted = 0;
+    var updated = 0;
+    final retained = <String>{};
+    for (final course in preview.courses) {
+      final externalId = course.externalId;
+      if (externalId == null || externalId.isEmpty) {
+        throw ArgumentError('imported courses require externalId');
+      }
+      retained.add(externalId);
+      final existing = existingByExternalId[externalId];
+      if (existing == null) {
+        inserted++;
+      } else {
+        final normalized = Course(
+          id: existing.id,
+          semesterId: preview.semester.id,
+          source: CourseSource.cdcasKingo,
+          externalId: externalId,
+          name: course.name,
+          teacher: course.teacher,
+          colorValue: course.colorValue,
+          sessions: course.sessions,
+        );
+        if (!_sameCourse(existing, normalized)) updated++;
+      }
+    }
+    return ImportSummary(
+      inserted: inserted,
+      updated: updated,
+      removed: existingByExternalId.keys
+          .where((id) => !retained.contains(id))
+          .length,
+      warnings: List.unmodifiable(preview.warnings),
+    );
   }
 
   Future<void> _saveCourse(Course course) async {

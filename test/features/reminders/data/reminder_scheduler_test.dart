@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qinghe_timetable/features/reminders/data/reminder_scheduler.dart';
 import 'package:qinghe_timetable/features/reminders/domain/reminder_models.dart';
@@ -36,6 +38,31 @@ void main() {
       ]);
     },
   );
+
+  test('serializes concurrent replacements so the latest request wins', () async {
+    gateway.permission = ReminderPermissionState.grantedExact;
+    gateway.pauseFirstSchedule = true;
+    final first = scheduler.replaceAll([reminder]);
+    await gateway.firstScheduleStarted.future;
+    final latestReminder = CourseReminder(
+      id: 84,
+      scheduledAt: DateTime(2026, 9, 22, 7, 55),
+      title: '30分钟后上课：大学英语',
+      body: '第1-2节 · B201 · 李老师',
+      payload: 'english',
+    );
+    final second = scheduler.replaceAll([latestReminder]);
+
+    gateway.releaseFirstSchedule.complete();
+    await Future.wait([first, second]);
+
+    expect(gateway.events, [
+      'cancelAll',
+      'schedule:42:exact',
+      'cancelAll',
+      'schedule:84:exact',
+    ]);
+  });
 
   test('uses inexact scheduling when exact alarms are unavailable', () async {
     gateway.permission = ReminderPermissionState.grantedInexact;
@@ -78,6 +105,9 @@ class FakeNotificationGateway implements NotificationGateway {
   int initializeCalls = 0;
   int requestCalls = 0;
   final events = <String>[];
+  bool pauseFirstSchedule = false;
+  final firstScheduleStarted = Completer<void>();
+  final releaseFirstSchedule = Completer<void>();
 
   @override
   Future<void> cancelAll() async => events.add('cancelAll');
@@ -99,5 +129,9 @@ class FakeNotificationGateway implements NotificationGateway {
   @override
   Future<void> schedule(CourseReminder reminder, {required bool exact}) async {
     events.add('schedule:${reminder.id}:${exact ? 'exact' : 'inexact'}');
+    if (pauseFirstSchedule && !firstScheduleStarted.isCompleted) {
+      firstScheduleStarted.complete();
+      await releaseFirstSchedule.future;
+    }
   }
 }

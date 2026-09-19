@@ -19,7 +19,11 @@ class ImportPreview {
   final List<String> warnings;
 }
 
-enum TimetableImportErrorCode { notTimetablePage, emptyTimetable }
+enum TimetableImportErrorCode {
+  notTimetablePage,
+  emptyTimetable,
+  invalidSemester,
+}
 
 class TimetableImportException implements Exception {
   const TimetableImportException(this.code, this.message);
@@ -68,6 +72,7 @@ class CdcasKingoImporter implements TimetableImporter {
     final parsed = <_ParsedSession>[];
     final warnings = <String>[];
     final rows = tableMatch.table.querySelectorAll('tr');
+    var occupiedColumns = <int, int>{};
     for (
       var rowIndex = tableMatch.headerRow + 1;
       rowIndex < rows.length;
@@ -77,9 +82,22 @@ class CdcasKingoImporter implements TimetableImporter {
       if (cells.isEmpty) continue;
       final rowSections = _sectionsFrom(_cellLines(cells.first));
       var logicalColumn = 0;
+      final nextOccupied = <int, int>{
+        for (final entry in occupiedColumns.entries)
+          if (entry.value > 1) entry.key: entry.value - 1,
+      };
       for (final cell in cells) {
+        while (occupiedColumns.containsKey(logicalColumn)) {
+          logicalColumn++;
+        }
         final span = int.tryParse(cell.attributes['colspan'] ?? '') ?? 1;
+        final rowSpan = int.tryParse(cell.attributes['rowspan'] ?? '') ?? 1;
         final weekday = tableMatch.weekdays[logicalColumn];
+        if (rowSpan > 1) {
+          for (var column = logicalColumn; column < logicalColumn + span; column++) {
+            nextOccupied[column] = rowSpan - 1;
+          }
+        }
         logicalColumn += span;
         if (weekday == null) continue;
         final session = _parseCell(cell, weekday, rowSections);
@@ -89,6 +107,7 @@ class CdcasKingoImporter implements TimetableImporter {
           warnings.add('第 ${rowIndex + 1} 行存在无法识别的课程信息');
         }
       }
+      occupiedColumns = nextOccupied;
     }
 
     if (parsed.isEmpty) {
@@ -112,7 +131,7 @@ class CdcasKingoImporter implements TimetableImporter {
       final externalId = _stableId(entry.key);
       courses.add(
         Course(
-          id: 'cdcas-$externalId',
+          id: 'cdcas-$externalId-${semester.id}',
           semesterId: semester.id,
           source: CourseSource.cdcasKingo,
           externalId: externalId,
@@ -163,6 +182,7 @@ class CdcasKingoImporter implements TimetableImporter {
     );
     final weekMatch = _weekRange.firstMatch(weekLine);
     if (weekMatch == null) return null;
+    if (lines.where(_weekRange.hasMatch).length > 1) return null;
     final sections = _sectionsFrom(lines) ?? rowSections;
     if (sections == null) return null;
 
@@ -250,17 +270,16 @@ class CdcasKingoImporter implements TimetableImporter {
 
   Semester _semester(Document document, Element table) {
     final match = _semesterPattern.firstMatch(document.body?.text ?? '');
-    final start =
-        DateTime.tryParse(table.attributes['data-first-week-start'] ?? '') ??
-        DateTime(2026, 9, 7);
-    final totalWeeks =
-        int.tryParse(table.attributes['data-total-weeks'] ?? '') ?? 18;
-    if (match == null) {
-      return Semester(
-        id: 'cdcas-2026-2027-1',
-        name: '2026-2027学年第1学期',
-        firstWeekStart: start,
-        totalWeeks: totalWeeks,
+    final start = DateTime.tryParse(
+      table.attributes['data-first-week-start'] ?? '',
+    );
+    final totalWeeks = int.tryParse(
+      table.attributes['data-total-weeks'] ?? '',
+    );
+    if (match == null || start == null || totalWeeks == null || totalWeeks < 1) {
+      throw const TimetableImportException(
+        TimetableImportErrorCode.invalidSemester,
+        '无法确认学期名称或校历起始日期，请在教务系统打开完整的个人课表后重试。',
       );
     }
     final id = 'cdcas-${match.group(1)}-${match.group(2)}-${match.group(3)}';

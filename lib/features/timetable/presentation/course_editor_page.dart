@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../data/sample_schedule.dart';
 import '../domain/models.dart';
 
 class CourseEditorPage extends StatefulWidget {
-  const CourseEditorPage({super.key, this.initialCourse, required this.onSave});
+  const CourseEditorPage({
+    super.key,
+    required this.semesterId,
+    this.initialCourse,
+    required this.onSave,
+  });
 
+  final String semesterId;
   final Course? initialCourse;
   final Future<void> Function(Course course) onSave;
 
@@ -76,7 +81,7 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
       id:
           widget.initialCourse?.id ??
           'course-${DateTime.now().microsecondsSinceEpoch}',
-      semesterId: widget.initialCourse?.semesterId ?? sampleSemester.id,
+      semesterId: widget.initialCourse?.semesterId ?? widget.semesterId,
       source: widget.initialCourse?.source ?? CourseSource.manual,
       externalId: widget.initialCourse?.externalId,
       name: _name.text.trim(),
@@ -92,6 +97,7 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
           pattern: _pattern,
           room: _room.text.trim(),
         ),
+        ...?widget.initialCourse?.sessions.skip(1),
       ],
     );
     try {

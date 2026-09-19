@@ -29,6 +29,7 @@ void main() {
         home: TimetableImportPage(
           importer: const CdcasKingoImporter(),
           onImport: _successfulImport,
+          onPreview: _successfulImport,
           controllerFactory: () => controller,
         ),
       ),
@@ -51,6 +52,7 @@ void main() {
       MaterialApp(
         home: TimetableImportPage(
           importer: const CdcasKingoImporter(),
+          onPreview: _successfulImport,
           onImport: (preview) async {
             imported = true;
             return _successfulImport(preview);
@@ -74,6 +76,7 @@ void main() {
         home: TimetableImportPage(
           importer: const CdcasKingoImporter(),
           onImport: _successfulImport,
+          onPreview: _successfulImport,
           controllerFactory: () => controller,
         ),
       ),
@@ -86,6 +89,29 @@ void main() {
     expect(find.text('高等数学'), findsOneWidget);
   });
 
+  testWidgets('refuses extraction after navigation leaves the official host', (
+    tester,
+  ) async {
+    final controller = _FakeSchoolWebController(_validHtml)
+      ..uri = Uri.parse('https://example.com/captured-login');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimetableImportPage(
+          importer: const CdcasKingoImporter(),
+          onImport: _successfulImport,
+          onPreview: _successfulImport,
+          controllerFactory: () => controller,
+        ),
+      ),
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, '识别并导入'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('不在学校官网'), findsOneWidget);
+    expect(find.text('确认导入'), findsNothing);
+  });
+
   testWidgets('logout clears the school session', (tester) async {
     final controller = _FakeSchoolWebController('<html></html>');
     await tester.pumpWidget(
@@ -93,6 +119,7 @@ void main() {
         home: TimetableImportPage(
           importer: const CdcasKingoImporter(),
           onImport: _successfulImport,
+          onPreview: _successfulImport,
           controllerFactory: () => controller,
         ),
       ),
@@ -120,6 +147,7 @@ class _FakeSchoolWebController implements SchoolWebController {
 
   final String html;
   bool cleared = false;
+  Uri uri = Uri.parse(schoolTimetableUri);
 
   @override
   Widget buildView() => const ColoredBox(
@@ -127,6 +155,9 @@ class _FakeSchoolWebController implements SchoolWebController {
     color: Colors.white,
     child: Center(child: Text('教务网页')),
   );
+
+  @override
+  Future<Uri?> currentUri() async => uri;
 
   @override
   Future<void> clearSession() async {

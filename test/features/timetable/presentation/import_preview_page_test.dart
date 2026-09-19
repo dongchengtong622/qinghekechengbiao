@@ -43,7 +43,16 @@ void main() {
   testWidgets('lists semester, counts, courses, and warnings', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: ImportPreviewPage(preview: preview, onConfirm: _confirm),
+        home: ImportPreviewPage(
+          preview: preview,
+          changes: const ImportSummary(
+            inserted: 1,
+            updated: 0,
+            removed: 0,
+            warnings: [],
+          ),
+          onConfirm: _confirm,
+        ),
       ),
     );
 
@@ -51,6 +60,8 @@ void main() {
     expect(find.text('2026-2027学年第1学期'), findsOneWidget);
     expect(find.textContaining('1 门课程'), findsOneWidget);
     expect(find.textContaining('1 个上课时段'), findsOneWidget);
+    expect(find.textContaining('将新增 1'), findsOneWidget);
+    expect(find.textContaining('周一 第1-2节'), findsOneWidget);
     expect(find.text('高等数学'), findsOneWidget);
     expect(find.text('一行信息未识别'), findsOneWidget);
   });
@@ -62,6 +73,12 @@ void main() {
       MaterialApp(
         home: ImportPreviewPage(
           preview: preview,
+          changes: const ImportSummary(
+            inserted: 1,
+            updated: 0,
+            removed: 0,
+            warnings: [],
+          ),
           onConfirm: (_) {
             calls++;
             return completer.future;

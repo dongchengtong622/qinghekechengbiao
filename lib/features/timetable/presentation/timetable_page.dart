@@ -8,6 +8,7 @@ class TimetablePage extends StatelessWidget {
     required this.semester,
     required this.courses,
     required this.displayWeek,
+    this.remindersEnabled = false,
     this.onAdd,
     this.onImport,
     this.onReminders,
@@ -18,6 +19,7 @@ class TimetablePage extends StatelessWidget {
   final Semester semester;
   final List<Course> courses;
   final int displayWeek;
+  final bool remindersEnabled;
   final VoidCallback? onAdd;
   final VoidCallback? onImport;
   final VoidCallback? onReminders;
@@ -102,8 +104,12 @@ class TimetablePage extends StatelessWidget {
                     const SizedBox(width: 8),
                     IconButton.filledTonal(
                       onPressed: onReminders,
-                      icon: const Icon(Icons.notifications_none_rounded),
-                      tooltip: '提醒',
+                      icon: Icon(
+                        remindersEnabled
+                            ? Icons.notifications_active_rounded
+                            : Icons.notifications_none_rounded,
+                      ),
+                      tooltip: remindersEnabled ? '提醒已开启' : '提醒未开启',
                     ),
                   ],
                 ),

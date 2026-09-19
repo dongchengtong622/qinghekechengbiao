@@ -62,10 +62,26 @@ void main() {
     );
 
     await tester.tap(find.byTooltip('导入课表'));
-    await tester.tap(find.byTooltip('提醒'));
+    await tester.tap(find.byTooltip('提醒未开启'));
 
     expect(imported, isTrue);
     expect(remindersOpened, isTrue);
+  });
+
+  testWidgets('shows enabled reminder state in the header', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimetablePage(
+          semester: sampleSemester,
+          courses: sampleCourses,
+          displayWeek: 3,
+          remindersEnabled: true,
+        ),
+      ),
+    );
+
+    expect(find.byTooltip('提醒已开启'), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_active_rounded), findsOneWidget);
   });
 
   testWidgets('confirms before deleting a course', (tester) async {
