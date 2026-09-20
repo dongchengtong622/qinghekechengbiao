@@ -236,9 +236,8 @@ class ExcelTimetableImporter {
     return hour * 60 + minute;
   }
 
-  int? _weekday(String value) => switch (
-    value.replaceFirst(RegExp(r'^(星期|周)'), ''),
-  ) {
+  int? _weekday(String value) =>
+      switch (value.replaceFirst(RegExp(r'^(星期|周)'), '')) {
     '一' || '1' => DateTime.monday,
     '二' || '2' => DateTime.tuesday,
     '三' || '3' => DateTime.wednesday,
