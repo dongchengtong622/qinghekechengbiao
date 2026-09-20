@@ -85,7 +85,10 @@ class AppDatabase extends _$AppDatabase {
           courseSessionRows,
           courseSessionRows.startMinute,
         );
-        await migrator.addColumn(courseSessionRows, courseSessionRows.endMinute);
+        await migrator.addColumn(
+          courseSessionRows,
+          courseSessionRows.endMinute,
+        );
       }
     },
   );

@@ -100,14 +100,12 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
     final initial = start
         ? _startTime ?? const TimeOfDay(hour: 8, minute: 25)
         : _endTime ?? const TimeOfDay(hour: 10, minute: 0);
-    final selected = await (widget.timePicker ??
+    final selected =
+        await (widget.timePicker ??
             (context, initialTime) => showTimePicker(
               context: context,
               initialTime: initialTime,
-            ))(
-      context,
-      initial,
-    );
+            ))(context, initial);
     if (selected == null || !mounted) return;
     setState(() {
       if (start) {
@@ -123,9 +121,9 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
     final startMinute = _minuteOfDay(_startTime);
     final endMinute = _minuteOfDay(_endTime);
     if ((startMinute == null) != (endMinute == null)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请同时选择开始时间和结束时间')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请同时选择开始时间和结束时间')));
       return;
     }
     if (startMinute != null && endMinute! <= startMinute) {

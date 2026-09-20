@@ -109,9 +109,7 @@ class CourseRepository implements ReminderSettingsRepository {
       final soundName = values['reminder_sound'];
       return ReminderPreferences(
         enabled: values['reminders_enabled'] == 'true',
-        leadMinutes: leadMinutes != null && leadMinutes >= 0
-            ? leadMinutes
-            : 30,
+        leadMinutes: leadMinutes != null && leadMinutes >= 0 ? leadMinutes : 30,
         sound: ReminderSound.values.firstWhere(
           (sound) => sound.name == soundName,
           orElse: () => ReminderSound.systemDefault,
@@ -144,9 +142,11 @@ class CourseRepository implements ReminderSettingsRepository {
   }
 
   Future<void> _setMetadata(String key, String value) {
-    return database.into(database.appMetadata).insertOnConflictUpdate(
-      AppMetadataCompanion.insert(key: key, value: value),
-    );
+    return database
+        .into(database.appMetadata)
+        .insertOnConflictUpdate(
+          AppMetadataCompanion.insert(key: key, value: value),
+        );
   }
 
   Future<void> saveSemester(Semester semester, {bool makeActive = false}) {

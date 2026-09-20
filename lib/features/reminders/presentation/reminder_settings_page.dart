@@ -46,8 +46,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       if (!mounted) return;
       setState(() {
         _enabled =
-            preferences.enabled &&
-            permission != ReminderPermissionState.denied;
+            preferences.enabled && permission != ReminderPermissionState.denied;
         _leadMinutes = preferences.leadMinutes;
         _sound = preferences.sound;
         _permission = permission;
@@ -164,9 +163,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                     .map(
                       (minutes) => DropdownMenuItem(
                         value: minutes,
-                        child: Text(
-                          minutes == 0 ? '上课时' : '提前 $minutes 分钟',
-                        ),
+                        child: Text(minutes == 0 ? '上课时' : '提前 $minutes 分钟'),
                       ),
                     )
                     .toList(growable: false),

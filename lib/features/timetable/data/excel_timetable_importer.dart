@@ -79,14 +79,7 @@ class ExcelTimetableImporter {
       final header = _text(rows[headerIndex][index]);
       if (header.isNotEmpty) headers[header] = index;
     }
-    const required = [
-      '课程名称',
-      '星期',
-      '开始节次',
-      '结束节次',
-      '开始周',
-      '结束周',
-    ];
+    const required = ['课程名称', '星期', '开始节次', '结束节次', '开始周', '结束周'];
     final missing = required.where((header) => !headers.containsKey(header));
     if (missing.isNotEmpty) {
       throw ExcelImportException('Excel 缺少必要列：${missing.join('、')}。');
@@ -146,20 +139,23 @@ class ExcelTimetableImporter {
     }
     final configuredWeeks = _integer(_metadataValue(rows, '总周数'));
     final totalWeeks = configuredWeeks ?? largestEndWeek;
-    final courses = grouped.entries.map((entry) {
-      final externalId = _stableId(entry.key);
-      return Course(
-        id: 'excel-$externalId-$semesterId',
-        semesterId: semesterId,
-        source: CourseSource.cdcasKingo,
-        externalId: externalId,
-        name: entry.value.name,
-        teacher: entry.value.teacher,
-        colorValue: _colors[_positiveHash(entry.key) % _colors.length],
-        sessions: List.unmodifiable(entry.value.sessions),
-      );
-    }).toList(growable: false)
-      ..sort((left, right) => left.name.compareTo(right.name));
+    final courses =
+        grouped.entries
+            .map((entry) {
+              final externalId = _stableId(entry.key);
+              return Course(
+                id: 'excel-$externalId-$semesterId',
+                semesterId: semesterId,
+                source: CourseSource.cdcasKingo,
+                externalId: externalId,
+                name: entry.value.name,
+                teacher: entry.value.teacher,
+                colorValue: _colors[_positiveHash(entry.key) % _colors.length],
+                sessions: List.unmodifiable(entry.value.sessions),
+              );
+            })
+            .toList(growable: false)
+          ..sort((left, right) => left.name.compareTo(right.name));
     return ImportPreview(
       semester: Semester(
         id: semesterId,
@@ -206,11 +202,8 @@ class ExcelTimetableImporter {
     return index == null || index >= row.length ? null : row[index];
   }
 
-  String _field(
-    List<Object?> row,
-    Map<String, int> headers,
-    String name,
-  ) => _text(_fieldValue(row, headers, name)).trim();
+  String _field(List<Object?> row, Map<String, int> headers, String name) =>
+      _text(_fieldValue(row, headers, name)).trim();
 
   String _text(Object? value) => value?.toString() ?? '';
 
@@ -228,7 +221,9 @@ class ExcelTimetableImporter {
   int? _time(Object? value) {
     if (value == null || _text(value).trim().isEmpty) return null;
     if (value is Duration) return value.inMinutes;
-    final match = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(_text(value).trim());
+    final match = RegExp(
+      r'^(\d{1,2}):(\d{2})$',
+    ).firstMatch(_text(value).trim());
     if (match == null) return null;
     final hour = int.parse(match.group(1)!);
     final minute = int.parse(match.group(2)!);
@@ -238,15 +233,15 @@ class ExcelTimetableImporter {
 
   int? _weekday(String value) =>
       switch (value.replaceFirst(RegExp(r'^(星期|周)'), '')) {
-    '一' || '1' => DateTime.monday,
-    '二' || '2' => DateTime.tuesday,
-    '三' || '3' => DateTime.wednesday,
-    '四' || '4' => DateTime.thursday,
-    '五' || '5' => DateTime.friday,
-    '六' || '6' => DateTime.saturday,
-    '日' || '天' || '7' => DateTime.sunday,
-    _ => null,
-  };
+        '一' || '1' => DateTime.monday,
+        '二' || '2' => DateTime.tuesday,
+        '三' || '3' => DateTime.wednesday,
+        '四' || '4' => DateTime.thursday,
+        '五' || '5' => DateTime.friday,
+        '六' || '6' => DateTime.saturday,
+        '日' || '天' || '7' => DateTime.sunday,
+        _ => null,
+      };
 
   WeekPattern _pattern(String value) {
     if (value.contains('单')) return WeekPattern.oddWeeks;
