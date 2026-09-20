@@ -254,7 +254,9 @@ class _CourseTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      '第 ${session.startSection}–${session.endSection} 节 · ${session.room} · ${course.teacher}',
+                      '第 ${session.startSection}–${session.endSection} 节'
+                      '${session.timeLabel == null ? '' : ' · ${session.timeLabel}'}'
+                      ' · ${session.room} · ${course.teacher}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],

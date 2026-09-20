@@ -17,20 +17,22 @@ const cdcasSectionStarts = <int, TimeOfDayParts>{
 };
 
 class ReminderPlanner {
-  const ReminderPlanner({this.leadTime = const Duration(minutes: 30)});
-
-  final Duration leadTime;
+  const ReminderPlanner();
 
   List<CourseReminder> plan({
     required Semester semester,
     required List<Course> courses,
     required DateTime now,
+    Duration leadTime = const Duration(minutes: 30),
+    ReminderSound sound = ReminderSound.systemDefault,
   }) {
     final reminders = <CourseReminder>[];
     for (final course in courses) {
       for (final session in course.sessions) {
         final startTime = cdcasSectionStarts[session.startSection];
-        if (startTime == null) continue;
+        if (startTime == null && session.startMinute == null) continue;
+        final classStartMinute =
+            session.startMinute ?? startTime!.hour * 60 + startTime.minute;
         for (var week = 1; week <= semester.totalWeeks; week++) {
           if (!session.occursInWeek(week)) continue;
           final date = semester.firstWeekStart.add(
@@ -45,8 +47,8 @@ class ReminderPlanner {
             date.year,
             date.month,
             date.day,
-            startTime.hour,
-            startTime.minute,
+            classStartMinute ~/ 60,
+            classStartMinute % 60,
           );
           final scheduledAt = classStart.subtract(leadTime);
           if (!scheduledAt.isAfter(now)) continue;
@@ -59,9 +61,10 @@ class ReminderPlanner {
             CourseReminder(
               id: _notificationId(course.id, session, week),
               scheduledAt: scheduledAt,
-              title: '30分钟后上课：${course.name}',
+              title: '${leadTime.inMinutes}分钟后上课：${course.name}',
               body: details.join(' · '),
               payload: course.id,
+              sound: sound,
             ),
           );
         }

@@ -40,10 +40,10 @@ jobs:
       - name: Test
         run: timeout 10m flutter test --reporter expanded
 
-      - name: Build Android debug APK
-        run: flutter build apk --debug
+      - name: Build Android arm64 release APK
+        run: flutter build apk --release --target-platform android-arm64
 
       - uses: actions/upload-artifact@v4
         with:
-          name: qinghe-timetable-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: qinghe-timetable-v3-arm64
+          path: build/app/outputs/flutter-apk/app-release.apk

@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../domain/models.dart';
 
+typedef CourseTimePicker =
+    Future<TimeOfDay?> Function(BuildContext context, TimeOfDay initialTime);
+
 class CourseEditorPage extends StatefulWidget {
   const CourseEditorPage({
     super.key,
     required this.semesterId,
     this.initialCourse,
+    this.timePicker,
     required this.onSave,
   });
 
   final String semesterId;
   final Course? initialCourse;
+  final CourseTimePicker? timePicker;
   final Future<void> Function(Course course) onSave;
 
   @override
@@ -29,6 +34,8 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
   late final TextEditingController _endWeek;
   late int _weekday;
   late WeekPattern _pattern;
+  TimeOfDay? _startTime;
+  TimeOfDay? _endTime;
   bool _saving = false;
 
   CourseSession? get _initialSession =>
@@ -52,6 +59,8 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
     _endWeek = TextEditingController(text: '${session?.endWeek ?? 18}');
     _weekday = session?.weekday ?? DateTime.monday;
     _pattern = session?.pattern ?? WeekPattern.everyWeek;
+    _startTime = _timeOfDay(session?.startMinute);
+    _endTime = _timeOfDay(session?.endMinute);
   }
 
   @override
@@ -74,8 +83,57 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
     return number != null && number > 0 ? null : '请输入大于 0 的数字';
   }
 
+  TimeOfDay? _timeOfDay(int? minute) => minute == null
+      ? null
+      : TimeOfDay(hour: minute ~/ 60, minute: minute % 60);
+
+  int? _minuteOfDay(TimeOfDay? time) =>
+      time == null ? null : time.hour * 60 + time.minute;
+
+  String _timeLabel(TimeOfDay? time) {
+    if (time == null) return '使用节次默认时间';
+    return '${time.hour.toString().padLeft(2, '0')}:'
+        '${time.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _selectTime({required bool start}) async {
+    final initial = start
+        ? _startTime ?? const TimeOfDay(hour: 8, minute: 25)
+        : _endTime ?? const TimeOfDay(hour: 10, minute: 0);
+    final selected = await (widget.timePicker ??
+            (context, initialTime) => showTimePicker(
+              context: context,
+              initialTime: initialTime,
+            ))(
+      context,
+      initial,
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      if (start) {
+        _startTime = selected;
+      } else {
+        _endTime = selected;
+      }
+    });
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final startMinute = _minuteOfDay(_startTime);
+    final endMinute = _minuteOfDay(_endTime);
+    if ((startMinute == null) != (endMinute == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请同时选择开始时间和结束时间')),
+      );
+      return;
+    }
+    if (startMinute != null && endMinute! <= startMinute) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('结束时间必须晚于开始时间')));
+      return;
+    }
     setState(() => _saving = true);
     final course = Course(
       id:
@@ -96,6 +154,8 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
           endWeek: _number(_endWeek),
           pattern: _pattern,
           room: _room.text.trim(),
+          startMinute: startMinute,
+          endMinute: endMinute,
         ),
         ...?widget.initialCourse?.sessions.skip(1),
       ],
@@ -156,6 +216,32 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                 ),
               ),
               onChanged: (value) => setState(() => _weekday = value!),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ListTile(
+                    key: const Key('start_time'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('开始时间'),
+                    subtitle: Text(_timeLabel(_startTime)),
+                    trailing: const Icon(Icons.schedule_rounded),
+                    onTap: () => _selectTime(start: true),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ListTile(
+                    key: const Key('end_time'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('结束时间'),
+                    subtitle: Text(_timeLabel(_endTime)),
+                    trailing: const Icon(Icons.schedule_rounded),
+                    onTap: () => _selectTime(start: false),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Row(

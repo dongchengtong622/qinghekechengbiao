@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:qinghe_timetable/features/timetable/data/cdcas_kingo_importer.dart';
 import 'package:qinghe_timetable/features/timetable/data/course_repository.dart';
+import 'package:qinghe_timetable/features/timetable/data/timetable_import.dart';
 import 'package:qinghe_timetable/features/timetable/domain/models.dart';
 import 'package:qinghe_timetable/features/timetable/presentation/timetable_import_page.dart';
 

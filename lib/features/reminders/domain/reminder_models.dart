@@ -1,5 +1,19 @@
 enum ReminderPermissionState { grantedExact, grantedInexact, denied }
 
+enum ReminderSound { systemDefault, chime, soft, alert }
+
+class ReminderPreferences {
+  const ReminderPreferences({
+    required this.enabled,
+    required this.leadMinutes,
+    required this.sound,
+  });
+
+  final bool enabled;
+  final int leadMinutes;
+  final ReminderSound sound;
+}
+
 class CourseReminder {
   const CourseReminder({
     required this.id,
@@ -7,6 +21,7 @@ class CourseReminder {
     required this.title,
     required this.body,
     required this.payload,
+    this.sound = ReminderSound.systemDefault,
   });
 
   final int id;
@@ -14,6 +29,7 @@ class CourseReminder {
   final String title;
   final String body;
   final String payload;
+  final ReminderSound sound;
 }
 
 class TimeOfDayParts {

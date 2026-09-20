@@ -1,9 +1,10 @@
 import 'package:drift/drift.dart';
 
+import '../../reminders/domain/reminder_models.dart';
 import '../../reminders/domain/reminder_settings_repository.dart';
 import '../domain/models.dart';
 import 'app_database.dart';
-import 'cdcas_kingo_importer.dart';
+import 'timetable_import.dart';
 import 'sample_schedule.dart';
 
 class ImportSummary {
@@ -101,6 +102,25 @@ class CourseRepository implements ReminderSettingsRepository {
   }
 
   @override
+  Stream<ReminderPreferences> watchReminderPreferences() {
+    return database.select(database.appMetadata).watch().map((rows) {
+      final values = {for (final row in rows) row.key: row.value};
+      final leadMinutes = int.tryParse(values['reminder_lead_minutes'] ?? '');
+      final soundName = values['reminder_sound'];
+      return ReminderPreferences(
+        enabled: values['reminders_enabled'] == 'true',
+        leadMinutes: leadMinutes != null && leadMinutes >= 0
+            ? leadMinutes
+            : 30,
+        sound: ReminderSound.values.firstWhere(
+          (sound) => sound.name == soundName,
+          orElse: () => ReminderSound.systemDefault,
+        ),
+      );
+    });
+  }
+
+  @override
   Future<void> setRemindersEnabled(bool enabled) {
     return database
         .into(database.appMetadata)
@@ -110,6 +130,23 @@ class CourseRepository implements ReminderSettingsRepository {
             value: enabled.toString(),
           ),
         );
+  }
+
+  @override
+  Future<void> setReminderLeadMinutes(int minutes) {
+    if (minutes < 0) throw ArgumentError.value(minutes, 'minutes');
+    return _setMetadata('reminder_lead_minutes', '$minutes');
+  }
+
+  @override
+  Future<void> setReminderSound(ReminderSound sound) {
+    return _setMetadata('reminder_sound', sound.name);
+  }
+
+  Future<void> _setMetadata(String key, String value) {
+    return database.into(database.appMetadata).insertOnConflictUpdate(
+      AppMetadataCompanion.insert(key: key, value: value),
+    );
   }
 
   Future<void> saveSemester(Semester semester, {bool makeActive = false}) {
@@ -314,6 +351,8 @@ class CourseRepository implements ReminderSettingsRepository {
                 endWeek: session.endWeek,
                 pattern: session.pattern.name,
                 room: session.room,
+                startMinute: Value(session.startMinute),
+                endMinute: Value(session.endMinute),
               ),
             )
             .toList(growable: false),
@@ -360,6 +399,8 @@ class CourseRepository implements ReminderSettingsRepository {
       endWeek: row.endWeek,
       pattern: WeekPattern.values.byName(row.pattern),
       room: row.room,
+      startMinute: row.startMinute,
+      endMinute: row.endMinute,
     );
   }
 
@@ -401,5 +442,5 @@ class CourseRepository implements ReminderSettingsRepository {
   String _sessionKey(CourseSession session) =>
       '${session.weekday}|${session.startSection}|${session.endSection}|'
       '${session.startWeek}|${session.endWeek}|${session.pattern.name}|'
-      '${session.room}';
+      '${session.room}|${session.startMinute}|${session.endMinute}';
 }

@@ -4,11 +4,32 @@ void main(List<String> arguments) {
   configureAndroid(Directory(arguments.isEmpty ? 'android' : arguments.first));
 }
 
-void configureAndroid(Directory androidDirectory) {
+void configureAndroid(
+  Directory androidDirectory, {
+  Directory? sourceDirectory,
+}) {
   _configureGradle(File('${androidDirectory.path}/app/build.gradle.kts'));
   _configureManifest(
     File('${androidDirectory.path}/app/src/main/AndroidManifest.xml'),
   );
+  _copyNotificationSounds(
+    sourceDirectory ?? Directory.current,
+    Directory('${androidDirectory.path}/app/src/main/res/raw'),
+  );
+}
+
+void _copyNotificationSounds(Directory sourceDirectory, Directory target) {
+  final source = Directory(
+    '${sourceDirectory.path}/assets/notification_sounds',
+  );
+  target.createSync(recursive: true);
+  for (final name in [
+    'qinghe_chime.wav',
+    'qinghe_soft.wav',
+    'qinghe_alert.wav',
+  ]) {
+    File('${source.path}/$name').copySync('${target.path}/$name');
+  }
 }
 
 void _configureGradle(File file) {

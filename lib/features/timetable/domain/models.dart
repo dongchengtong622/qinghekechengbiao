@@ -61,11 +61,20 @@ class CourseSession {
     required this.endWeek,
     required this.pattern,
     required this.room,
+    this.startMinute,
+    this.endMinute,
   }) : assert(weekday >= DateTime.monday && weekday <= DateTime.sunday),
        assert(startSection > 0),
        assert(endSection >= startSection),
        assert(startWeek > 0),
-       assert(endWeek >= startWeek);
+       assert(endWeek >= startWeek),
+       assert(startMinute == null || startMinute >= 0),
+       assert(startMinute == null || startMinute < 24 * 60),
+       assert(endMinute == null || endMinute >= 0),
+       assert(endMinute == null || endMinute < 24 * 60),
+       assert(
+         startMinute == null || endMinute == null || endMinute > startMinute,
+       );
 
   final int weekday;
   final int startSection;
@@ -74,6 +83,20 @@ class CourseSession {
   final int endWeek;
   final WeekPattern pattern;
   final String room;
+  final int? startMinute;
+  final int? endMinute;
+
+  String? get timeLabel {
+    if (startMinute == null || endMinute == null) return null;
+    return '${_formatMinute(startMinute!)}–${_formatMinute(endMinute!)}';
+  }
+
+  static String _formatMinute(int minute) {
+    final hour = minute ~/ 60;
+    final remainder = minute % 60;
+    return '${hour.toString().padLeft(2, '0')}:'
+        '${remainder.toString().padLeft(2, '0')}';
+  }
 
   bool occursInWeek(int week) {
     if (week < startWeek || week > endWeek) return false;

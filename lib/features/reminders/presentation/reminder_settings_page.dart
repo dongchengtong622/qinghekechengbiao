@@ -27,6 +27,8 @@ class ReminderSettingsPage extends StatefulWidget {
 class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
   bool _loading = true;
   bool _enabled = false;
+  int _leadMinutes = 30;
+  ReminderSound _sound = ReminderSound.systemDefault;
   ReminderPermissionState _permission = ReminderPermissionState.denied;
 
   @override
@@ -37,11 +39,17 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
 
   Future<void> _load() async {
     try {
-      final enabled = await widget.repository.watchRemindersEnabled().first;
+      final preferences = await widget.repository
+          .watchReminderPreferences()
+          .first;
       final permission = await widget.scheduler.permissionState();
       if (!mounted) return;
       setState(() {
-        _enabled = enabled && permission != ReminderPermissionState.denied;
+        _enabled =
+            preferences.enabled &&
+            permission != ReminderPermissionState.denied;
+        _leadMinutes = preferences.leadMinutes;
+        _sound = preferences.sound;
         _permission = permission;
       });
     } catch (_) {
@@ -53,6 +61,37 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       if (mounted) setState(() => _loading = false);
     }
   }
+
+  Future<void> _setLeadMinutes(int? minutes) async {
+    if (minutes == null || _loading) return;
+    setState(() => _loading = true);
+    try {
+      await widget.repository.setReminderLeadMinutes(minutes);
+      if (_enabled) await widget.onChanged(true);
+      if (mounted) setState(() => _leadMinutes = minutes);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _setSound(ReminderSound? sound) async {
+    if (sound == null || _loading) return;
+    setState(() => _loading = true);
+    try {
+      await widget.repository.setReminderSound(sound);
+      if (_enabled) await widget.onChanged(true);
+      if (mounted) setState(() => _sound = sound);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _soundLabel(ReminderSound sound) => switch (sound) {
+    ReminderSound.systemDefault => '系统默认',
+    ReminderSound.chime => '清脆铃声',
+    ReminderSound.soft => '柔和铃声',
+    ReminderSound.alert => '提示音',
+  };
 
   Future<void> _setEnabled(bool enabled) async {
     if (_loading) return;
@@ -103,9 +142,59 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
           Card(
             child: SwitchListTile(
               title: const Text('上课提醒'),
-              subtitle: const Text('提前 30 分钟'),
+              subtitle: Text(
+                _leadMinutes == 0 ? '上课时提醒' : '提前 $_leadMinutes 分钟',
+              ),
               value: _enabled,
               onChanged: _loading ? null : _setEnabled,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: DropdownButtonFormField<int>(
+                key: const Key('lead_time'),
+                initialValue: _leadMinutes,
+                decoration: const InputDecoration(
+                  labelText: '提醒时间',
+                  border: InputBorder.none,
+                ),
+                items: const [0, 5, 10, 15, 30, 60]
+                    .map(
+                      (minutes) => DropdownMenuItem(
+                        value: minutes,
+                        child: Text(
+                          minutes == 0 ? '上课时' : '提前 $minutes 分钟',
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: _loading ? null : _setLeadMinutes,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: DropdownButtonFormField<ReminderSound>(
+                key: const Key('reminder_sound'),
+                initialValue: _sound,
+                decoration: const InputDecoration(
+                  labelText: '提醒铃声',
+                  border: InputBorder.none,
+                ),
+                items: ReminderSound.values
+                    .map(
+                      (sound) => DropdownMenuItem(
+                        value: sound,
+                        child: Text(_soundLabel(sound)),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: _loading ? null : _setSound,
+              ),
             ),
           ),
           const SizedBox(height: 12),

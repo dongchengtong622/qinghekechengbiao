@@ -40,6 +40,8 @@ class CourseSessionRows extends Table {
   IntColumn get endWeek => integer()();
   TextColumn get pattern => text()();
   TextColumn get room => text()();
+  IntColumn get startMinute => integer().nullable()();
+  IntColumn get endMinute => integer().nullable()();
 }
 
 class AppMetadata extends Table {
@@ -57,7 +59,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -77,6 +79,13 @@ class AppDatabase extends _$AppDatabase {
         await migrator.addColumn(courseRows, courseRows.semesterId);
         await migrator.addColumn(courseRows, courseRows.sourceType);
         await migrator.addColumn(courseRows, courseRows.externalId);
+      }
+      if (from < 3) {
+        await migrator.addColumn(
+          courseSessionRows,
+          courseSessionRows.startMinute,
+        );
+        await migrator.addColumn(courseSessionRows, courseSessionRows.endMinute);
       }
     },
   );

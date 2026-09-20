@@ -75,19 +75,30 @@ class FlutterLocalNotificationGateway implements NotificationGateway {
   }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   static const channelId = 'qinghe_course_reminders';
-  static const _notificationDetails = NotificationDetails(
-    android: AndroidNotificationDetails(
-      channelId,
-      '课程提醒',
-      channelDescription: '在课程开始前 30 分钟提醒',
-      importance: Importance.max,
-      priority: Priority.max,
-      playSound: true,
-      enableVibration: true,
-      visibility: NotificationVisibility.public,
-      category: AndroidNotificationCategory.reminder,
-    ),
-  );
+  NotificationDetails _notificationDetails(ReminderSound sound) {
+    final resourceName = switch (sound) {
+      ReminderSound.systemDefault => null,
+      ReminderSound.chime => 'qinghe_chime',
+      ReminderSound.soft => 'qinghe_soft',
+      ReminderSound.alert => 'qinghe_alert',
+    };
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        '${channelId}_${sound.name}',
+        '课程提醒',
+        channelDescription: '按设定时间提醒课程',
+        importance: Importance.max,
+        priority: Priority.max,
+        playSound: true,
+        sound: resourceName == null
+            ? null
+            : RawResourceAndroidNotificationSound(resourceName),
+        enableVibration: true,
+        visibility: NotificationVisibility.public,
+        category: AndroidNotificationCategory.reminder,
+      ),
+    );
+  }
 
   final FlutterLocalNotificationsPlugin _plugin;
   final void Function(String? payload)? onNotificationTap;
@@ -154,7 +165,7 @@ class FlutterLocalNotificationGateway implements NotificationGateway {
         scheduledAt.minute,
         scheduledAt.second,
       ),
-      notificationDetails: _notificationDetails,
+      notificationDetails: _notificationDetails(reminder.sound),
       androidScheduleMode: exact
           ? AndroidScheduleMode.exactAllowWhileIdle
           : AndroidScheduleMode.inexactAllowWhileIdle,

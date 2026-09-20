@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import 'core/theme/app_theme.dart';
@@ -7,8 +8,8 @@ import 'features/timetable/data/app_database.dart';
 import 'features/reminders/data/reminder_scheduler.dart';
 import 'features/reminders/domain/reminder_planner.dart';
 import 'features/reminders/presentation/reminder_settings_page.dart';
-import 'features/timetable/data/cdcas_kingo_importer.dart';
 import 'features/timetable/data/course_repository.dart';
+import 'features/timetable/data/excel_timetable_importer.dart';
 import 'features/timetable/domain/models.dart';
 import 'features/timetable/presentation/course_editor_page.dart';
 import 'features/timetable/presentation/timetable_page.dart';
@@ -91,8 +92,8 @@ class _QingheAppState extends State<QingheApp> with WidgetsBindingObserver {
   }
 
   Future<void> _rescheduleReminders({bool? enabled}) async {
-    final remindersEnabled =
-        enabled ?? await repository.watchRemindersEnabled().first;
+    final preferences = await repository.watchReminderPreferences().first;
+    final remindersEnabled = enabled ?? preferences.enabled;
     if (!remindersEnabled) {
       await reminderScheduler.replaceAll(const []);
       return;
@@ -104,6 +105,8 @@ class _QingheAppState extends State<QingheApp> with WidgetsBindingObserver {
         semester: semester,
         courses: courses,
         now: DateTime.now(),
+        leadTime: Duration(minutes: preferences.leadMinutes),
+        sound: preferences.sound,
       ),
     );
   }
@@ -112,7 +115,19 @@ class _QingheAppState extends State<QingheApp> with WidgetsBindingObserver {
     final summary = await Navigator.of(context).push<ImportSummary>(
       MaterialPageRoute(
         builder: (_) => TimetableImportPage(
-          importer: const CdcasKingoImporter(),
+          loadPreview: () async {
+            final result = await FilePicker.platform.pickFiles(
+              type: FileType.custom,
+              allowedExtensions: const ['xlsx'],
+              withData: true,
+            );
+            if (result == null) return null;
+            final bytes = result.files.single.bytes;
+            if (bytes == null) {
+              throw const ExcelImportException('无法读取所选文件，请重新选择。');
+            }
+            return const ExcelTimetableImporter().parseBytes(bytes);
+          },
           onImport: repository.importTimetable,
           onPreview: repository.previewTimetableImport,
         ),

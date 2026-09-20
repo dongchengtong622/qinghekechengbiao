@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../data/cdcas_kingo_importer.dart';
 import '../data/course_repository.dart';
+import '../data/timetable_import.dart';
 import '../domain/models.dart';
 
 typedef ConfirmTimetableImport =
@@ -123,7 +123,8 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
   String _sessionDescription(CourseSession session) {
     final weekday = '一二三四五六日'[session.weekday - 1];
     final room = session.room.isEmpty ? '教室待确认' : session.room;
-    return '周$weekday 第${session.startSection}-${session.endSection}节 · '
+    final time = session.timeLabel == null ? '' : ' · ${session.timeLabel}';
+    return '周$weekday 第${session.startSection}-${session.endSection}节$time · '
         '${session.startWeek}-${session.endWeek}周 · $room';
   }
 }
