@@ -7,6 +7,7 @@ void main() {
   Future<void> pumpEditor(
     WidgetTester tester, {
     Course? initialCourse,
+    CourseTimePicker? timePicker,
     required Future<void> Function(Course) onSave,
   }) {
     return tester.pumpWidget(
@@ -14,6 +15,7 @@ void main() {
         home: CourseEditorPage(
           semesterId: 'active-semester',
           initialCourse: initialCourse,
+          timePicker: timePicker,
           onSave: onSave,
         ),
       ),
@@ -57,6 +59,31 @@ void main() {
     expect(saved?.teacher, '陈老师');
     expect(saved?.sessions.single.room, 'A302');
     expect(saved?.semesterId, 'active-semester');
+  });
+
+  testWidgets('allows selecting custom start and end times', (tester) async {
+    Course? saved;
+    final selections = <TimeOfDay>[
+      const TimeOfDay(hour: 9, minute: 40),
+      const TimeOfDay(hour: 11, minute: 15),
+    ];
+    await pumpEditor(
+      tester,
+      timePicker: (_, _) async => selections.removeAt(0),
+      onSave: (course) async => saved = course,
+    );
+    await tester.enterText(find.byKey(const Key('course_name')), '高等数学');
+
+    await tester.tap(find.byKey(const Key('start_time')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('end_time')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    expect(saved?.sessions.single.startMinute, 580);
+    expect(saved?.sessions.single.endMinute, 675);
   });
 
   testWidgets('prefills an existing course for editing', (tester) async {

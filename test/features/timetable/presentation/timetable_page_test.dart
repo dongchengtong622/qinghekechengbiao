@@ -22,6 +22,43 @@ void main() {
     expect(find.textContaining('A302'), findsOneWidget);
   });
 
+  testWidgets('shows a course custom time range', (tester) async {
+    final original = sampleCourses.first;
+    final session = original.sessions.first;
+    final custom = Course(
+      id: original.id,
+      semesterId: original.semesterId,
+      source: original.source,
+      name: original.name,
+      teacher: original.teacher,
+      colorValue: original.colorValue,
+      sessions: [
+        CourseSession(
+          weekday: session.weekday,
+          startSection: session.startSection,
+          endSection: session.endSection,
+          startWeek: session.startWeek,
+          endWeek: session.endWeek,
+          pattern: session.pattern,
+          room: session.room,
+          startMinute: 9 * 60 + 40,
+          endMinute: 11 * 60 + 15,
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimetablePage(
+          semester: sampleSemester,
+          courses: [custom],
+          displayWeek: 3,
+        ),
+      ),
+    );
+
+    expect(find.textContaining('09:40–11:15'), findsOneWidget);
+  });
+
   testWidgets('invokes add and edit actions', (tester) async {
     var added = false;
     Course? edited;

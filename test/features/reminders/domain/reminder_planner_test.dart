@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qinghe_timetable/features/reminders/domain/reminder_models.dart';
 import 'package:qinghe_timetable/features/reminders/domain/reminder_planner.dart';
 import 'package:qinghe_timetable/features/timetable/domain/models.dart';
 
@@ -75,6 +76,44 @@ void main() {
     expect(reminders.first.title, '30分钟后上课：高等数学');
     expect(reminders.first.body, '第1-2节 · A302 · 陈老师');
     expect(reminders.first.payload, 'math');
+  });
+
+  test('uses the selected lead time, sound, and custom class time', () {
+    final customCourse = course();
+    final session = customCourse.sessions.single;
+    final reminders = planner.plan(
+      semester: semester,
+      courses: [
+        Course(
+          id: customCourse.id,
+          semesterId: customCourse.semesterId,
+          source: customCourse.source,
+          name: customCourse.name,
+          teacher: customCourse.teacher,
+          colorValue: customCourse.colorValue,
+          sessions: [
+            CourseSession(
+              weekday: session.weekday,
+              startSection: session.startSection,
+              endSection: session.endSection,
+              startWeek: session.startWeek,
+              endWeek: session.endWeek,
+              pattern: session.pattern,
+              room: session.room,
+              startMinute: 9 * 60 + 40,
+              endMinute: 11 * 60 + 15,
+            ),
+          ],
+        ),
+      ],
+      now: DateTime(2026, 9, 1),
+      leadTime: const Duration(minutes: 10),
+      sound: ReminderSound.soft,
+    );
+
+    expect(reminders.first.scheduledAt, DateTime(2026, 9, 7, 9, 30));
+    expect(reminders.first.title, '10分钟后上课：高等数学');
+    expect(reminders.first.sound, ReminderSound.soft);
   });
 
   test('maps weekdays and honors week pattern and boundaries', () {

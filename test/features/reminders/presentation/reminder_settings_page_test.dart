@@ -27,6 +27,22 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('allows changing lead time and reminder sound', (tester) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.byKey(const Key('lead_time')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('提前 10 分钟').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('reminder_sound')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('柔和铃声').last);
+    await tester.pumpAndSettle();
+
+    expect(repository.leadMinutes, 10);
+    expect(repository.sound, ReminderSound.soft);
+  });
+
   testWidgets('does not request permission before a user enables reminders', (
     tester,
   ) async {
@@ -92,6 +108,18 @@ void main() {
 
 class FakeReminderSettingsRepository implements ReminderSettingsRepository {
   bool enabled = false;
+  int leadMinutes = 30;
+  ReminderSound sound = ReminderSound.systemDefault;
+
+  @override
+  Future<void> setReminderLeadMinutes(int minutes) async {
+    leadMinutes = minutes;
+  }
+
+  @override
+  Future<void> setReminderSound(ReminderSound sound) async {
+    this.sound = sound;
+  }
 
   @override
   Future<void> setRemindersEnabled(bool enabled) async {
@@ -100,6 +128,15 @@ class FakeReminderSettingsRepository implements ReminderSettingsRepository {
 
   @override
   Stream<bool> watchRemindersEnabled() => Stream.value(enabled);
+
+  @override
+  Stream<ReminderPreferences> watchReminderPreferences() => Stream.value(
+    ReminderPreferences(
+      enabled: enabled,
+      leadMinutes: leadMinutes,
+      sound: sound,
+    ),
+  );
 }
 
 class FakeReminderScheduler implements ReminderScheduler {

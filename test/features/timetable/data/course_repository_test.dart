@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qinghe_timetable/features/reminders/domain/reminder_models.dart';
 import 'package:qinghe_timetable/features/timetable/data/app_database.dart';
 import 'package:qinghe_timetable/features/timetable/data/cdcas_kingo_importer.dart';
 import 'package:qinghe_timetable/features/timetable/data/course_repository.dart';
@@ -103,6 +104,50 @@ void main() {
 
     await repository.setRemindersEnabled(false);
     expect(await repository.watchRemindersEnabled().first, isFalse);
+  });
+
+  test('persists reminder lead time and sound', () async {
+    final initial = await repository.watchReminderPreferences().first;
+    expect(initial.leadMinutes, 30);
+    expect(initial.sound, ReminderSound.systemDefault);
+
+    await repository.setReminderLeadMinutes(10);
+    await repository.setReminderSound(ReminderSound.chime);
+
+    final saved = await repository.watchReminderPreferences().first;
+    expect(saved.leadMinutes, 10);
+    expect(saved.sound, ReminderSound.chime);
+  });
+
+  test('persists custom start and end times for a course session', () async {
+    final custom = course();
+    await repository.saveCourse(
+      Course(
+        id: custom.id,
+        semesterId: custom.semesterId,
+        source: custom.source,
+        name: custom.name,
+        teacher: custom.teacher,
+        colorValue: custom.colorValue,
+        sessions: [
+          CourseSession(
+            weekday: DateTime.monday,
+            startSection: 1,
+            endSection: 2,
+            startWeek: 1,
+            endWeek: 18,
+            pattern: WeekPattern.everyWeek,
+            room: 'A302',
+            startMinute: 9 * 60 + 40,
+            endMinute: 11 * 60 + 15,
+          ),
+        ],
+      ),
+    );
+
+    final saved = (await repository.watchCourses().first).single.sessions.single;
+    expect(saved.startMinute, 580);
+    expect(saved.endMinute, 675);
   });
 
   test('updates a course and replaces its sessions', () async {

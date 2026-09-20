@@ -2,179 +2,83 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qinghe_timetable/features/timetable/data/cdcas_kingo_importer.dart';
 import 'package:qinghe_timetable/features/timetable/data/course_repository.dart';
+import 'package:qinghe_timetable/features/timetable/domain/models.dart';
 import 'package:qinghe_timetable/features/timetable/presentation/timetable_import_page.dart';
 
 void main() {
-  test('school navigation policy only permits the official HTTPS host', () {
-    expect(
-      isAllowedSchoolUri(
-        Uri.parse('https://jwc.cdcas.com/jsxsd/xskb/xskb_list.do'),
-      ),
-      isTrue,
-    );
-    expect(isAllowedSchoolUri(Uri.parse('http://jwc.cdcas.com/')), isFalse);
-    expect(isAllowedSchoolUri(Uri.parse('https://example.com/')), isFalse);
-    expect(
-      isAllowedSchoolUri(Uri.parse('https://jwc.cdcas.com.evil.test/')),
-      isFalse,
-    );
-  });
-
-  testWidgets('shows school, privacy notice, and import action', (
+  testWidgets('offers Excel selection without a teaching-system webview', (
     tester,
   ) async {
-    final controller = _FakeSchoolWebController('<html></html>');
     await tester.pumpWidget(
       MaterialApp(
         home: TimetableImportPage(
-          importer: const CdcasKingoImporter(),
-          onImport: _successfulImport,
-          onPreview: _successfulImport,
-          controllerFactory: () => controller,
+          loadPreview: () async => null,
+          onPreview: _summary,
+          onImport: _summary,
         ),
       ),
     );
 
-    expect(find.text('成都文理学院教务系统'), findsOneWidget);
-    expect(find.textContaining('账号、密码和验证码仅提交给学校官网'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, '识别并导入'), findsOneWidget);
-    expect(find.text('教务网页'), findsOneWidget);
+    expect(find.text('Excel 导入课表'), findsOneWidget);
+    expect(find.text('选择 Excel 文件'), findsOneWidget);
+    expect(find.textContaining('教务系统'), findsNothing);
   });
 
-  testWidgets('invalid HTML reports an error without importing', (
+  testWidgets('opens the existing confirmation page after selecting a file', (
     tester,
   ) async {
-    var imported = false;
-    final controller = _FakeSchoolWebController(
-      '<html><body>帐号登录 密码 验证码</body></html>',
-    );
     await tester.pumpWidget(
       MaterialApp(
         home: TimetableImportPage(
-          importer: const CdcasKingoImporter(),
-          onPreview: _successfulImport,
-          onImport: (preview) async {
-            imported = true;
-            return _successfulImport(preview);
-          },
-          controllerFactory: () => controller,
+          loadPreview: () async => _preview,
+          onPreview: _summary,
+          onImport: _summary,
         ),
       ),
     );
 
-    await tester.tap(find.widgetWithText(FilledButton, '识别并导入'));
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('当前页面不是个人课表'), findsOneWidget);
-    expect(imported, isFalse);
-  });
-
-  testWidgets('valid HTML opens an import preview', (tester) async {
-    final controller = _FakeSchoolWebController(_validHtml);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: TimetableImportPage(
-          importer: const CdcasKingoImporter(),
-          onImport: _successfulImport,
-          onPreview: _successfulImport,
-          controllerFactory: () => controller,
-        ),
-      ),
-    );
-
-    await tester.tap(find.widgetWithText(FilledButton, '识别并导入'));
+    await tester.tap(find.text('选择 Excel 文件'));
     await tester.pumpAndSettle();
 
     expect(find.text('确认导入'), findsOneWidget);
     expect(find.text('高等数学'), findsOneWidget);
   });
+}
 
-  testWidgets('refuses extraction after navigation leaves the official host', (
-    tester,
-  ) async {
-    final controller = _FakeSchoolWebController(_validHtml)
-      ..uri = Uri.parse('https://example.com/captured-login');
-    await tester.pumpWidget(
-      MaterialApp(
-        home: TimetableImportPage(
-          importer: const CdcasKingoImporter(),
-          onImport: _successfulImport,
-          onPreview: _successfulImport,
-          controllerFactory: () => controller,
+Future<ImportSummary> _summary(ImportPreview preview) async => ImportSummary(
+  inserted: preview.courses.length,
+  updated: 0,
+  removed: 0,
+  warnings: preview.warnings,
+);
+
+final _preview = ImportPreview(
+  semester: Semester(
+    id: 'excel-2026-2027-1',
+    name: '2026-2027学年第1学期',
+    firstWeekStart: DateTime(2026, 9, 7),
+    totalWeeks: 18,
+  ),
+  courses: const [
+    Course(
+      id: 'excel-math',
+      semesterId: 'excel-2026-2027-1',
+      source: CourseSource.cdcasKingo,
+      externalId: 'math',
+      name: '高等数学',
+      teacher: '陈老师',
+      colorValue: 0xFF2E7D66,
+      sessions: [
+        CourseSession(
+          weekday: DateTime.monday,
+          startSection: 1,
+          endSection: 2,
+          startWeek: 1,
+          endWeek: 18,
+          pattern: WeekPattern.everyWeek,
+          room: 'A302',
         ),
-      ),
-    );
-
-    await tester.tap(find.widgetWithText(FilledButton, '识别并导入'));
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('不在学校官网'), findsOneWidget);
-    expect(find.text('确认导入'), findsNothing);
-  });
-
-  testWidgets('logout clears the school session', (tester) async {
-    final controller = _FakeSchoolWebController('<html></html>');
-    await tester.pumpWidget(
-      MaterialApp(
-        home: TimetableImportPage(
-          importer: const CdcasKingoImporter(),
-          onImport: _successfulImport,
-          onPreview: _successfulImport,
-          controllerFactory: () => controller,
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('退出教务登录'));
-    await tester.pumpAndSettle();
-
-    expect(controller.cleared, isTrue);
-    expect(find.textContaining('登录信息已清除'), findsOneWidget);
-  });
-}
-
-Future<ImportSummary> _successfulImport(ImportPreview preview) async {
-  return ImportSummary(
-    inserted: preview.courses.length,
-    updated: 0,
-    removed: 0,
-    warnings: preview.warnings,
-  );
-}
-
-class _FakeSchoolWebController implements SchoolWebController {
-  _FakeSchoolWebController(this.html);
-
-  final String html;
-  bool cleared = false;
-  Uri uri = Uri.parse(schoolTimetableUri);
-
-  @override
-  Widget buildView() => const ColoredBox(
-    key: ValueKey('fake-school-webview'),
-    color: Colors.white,
-    child: Center(child: Text('教务网页')),
-  );
-
-  @override
-  Future<Uri?> currentUri() async => uri;
-
-  @override
-  Future<void> clearSession() async {
-    cleared = true;
-  }
-
-  @override
-  void dispose() {}
-
-  @override
-  Future<String> extractHtml() async => html;
-}
-
-const _validHtml = '''
-<html><body><h1>2026-2027学年第1学期学生课表</h1>
-<table data-first-week-start="2026-09-07" data-total-weeks="18">
-<tr><th>节次</th><th>星期一</th><th>星期二</th><th>星期三</th><th>星期四</th><th>星期五</th></tr>
-<tr><td>第1-2节</td><td>高等数学<br>第1-2节<br>1-18周<br>A302<br>陈老师</td><td></td><td></td><td></td><td></td></tr>
-</table></body></html>
-''';
+      ],
+    ),
+  ],
+);
