@@ -142,9 +142,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
             child: SwitchListTile(
               title: const Text('上课提醒'),
               subtitle: Text(
-                _leadMinutes == 0
-                    ? '当前：上课时提醒'
-                    : '当前：提前 $_leadMinutes 分钟',
+                _leadMinutes == 0 ? '当前：上课时提醒' : '当前：提前 $_leadMinutes 分钟',
               ),
               value: _enabled,
               onChanged: _loading ? null : _setEnabled,
