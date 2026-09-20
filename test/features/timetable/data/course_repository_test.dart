@@ -145,7 +145,8 @@ void main() {
       ),
     );
 
-    final saved = (await repository.watchCourses().first).single.sessions.single;
+    final saved =
+        (await repository.watchCourses().first).single.sessions.single;
     expect(saved.startMinute, 580);
     expect(saved.endMinute, 675);
   });
