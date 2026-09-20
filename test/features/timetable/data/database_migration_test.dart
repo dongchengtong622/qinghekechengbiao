@@ -124,7 +124,8 @@ void main() {
     final repository = CourseRepository(database);
     addTearDown(database.close);
 
-    final session = (await repository.watchCourses().first).single.sessions.single;
+    final session =
+        (await repository.watchCourses().first).single.sessions.single;
 
     expect(session.startMinute, isNull);
     expect(session.endMinute, isNull);
