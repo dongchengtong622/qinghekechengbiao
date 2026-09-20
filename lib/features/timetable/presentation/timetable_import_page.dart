@@ -6,6 +6,8 @@ import '../data/timetable_import.dart';
 import 'import_preview_page.dart';
 
 typedef LoadImportPreview = Future<ImportPreview?> Function();
+typedef PreviewTimetableImport =
+    Future<ImportSummary> Function(ImportPreview preview);
 
 class TimetableImportPage extends StatefulWidget {
   const TimetableImportPage({

@@ -116,16 +116,12 @@ class _QingheAppState extends State<QingheApp> with WidgetsBindingObserver {
       MaterialPageRoute(
         builder: (_) => TimetableImportPage(
           loadPreview: () async {
-            final result = await FilePicker.platform.pickFiles(
+            final file = await FilePicker.pickFile(
               type: FileType.custom,
               allowedExtensions: const ['xlsx'],
-              withData: true,
             );
-            if (result == null) return null;
-            final bytes = result.files.single.bytes;
-            if (bytes == null) {
-              throw const ExcelImportException('无法读取所选文件，请重新选择。');
-            }
+            if (file == null) return null;
+            final bytes = await file.readAsBytes();
             return const ExcelTimetableImporter().parseBytes(bytes);
           },
           onImport: repository.importTimetable,
