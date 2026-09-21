@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../domain/models.dart';
 
-class TimetablePage extends StatelessWidget {
+class TimetablePage extends StatefulWidget {
   const TimetablePage({
     super.key,
     required this.semester,
     required this.courses,
-    required this.displayWeek,
+    required this.initialDisplayWeek,
+    required this.currentWeek,
     this.remindersEnabled = false,
     this.onAdd,
     this.onImport,
@@ -18,7 +19,8 @@ class TimetablePage extends StatelessWidget {
 
   final Semester semester;
   final List<Course> courses;
-  final int displayWeek;
+  final int initialDisplayWeek;
+  final int? currentWeek;
   final bool remindersEnabled;
   final VoidCallback? onAdd;
   final VoidCallback? onImport;
@@ -26,6 +28,11 @@ class TimetablePage extends StatelessWidget {
   final ValueChanged<Course>? onEdit;
   final ValueChanged<Course>? onDelete;
 
+  @override
+  State<TimetablePage> createState() => _TimetablePageState();
+}
+
+class _TimetablePageState extends State<TimetablePage> {
   static const _weekdayNames = <String>[
     '周一',
     '周二',
@@ -36,11 +43,35 @@ class TimetablePage extends StatelessWidget {
     '周日',
   ];
 
+  late int _displayWeek;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayWeek = _clampWeek(widget.initialDisplayWeek);
+  }
+
+  @override
+  void didUpdateWidget(covariant TimetablePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.semester.id != widget.semester.id) {
+      _displayWeek = _clampWeek(widget.initialDisplayWeek);
+    } else if (_displayWeek > widget.semester.totalWeeks) {
+      _displayWeek = widget.semester.totalWeeks;
+    }
+  }
+
+  int _clampWeek(int week) {
+    if (week < 1) return 1;
+    if (week > widget.semester.totalWeeks) return widget.semester.totalWeeks;
+    return week;
+  }
+
   List<ScheduledCourse> _coursesFor(int weekday) {
     final result = <ScheduledCourse>[];
-    for (final course in courses) {
+    for (final course in widget.courses) {
       for (final session in course.sessions) {
-        if (session.weekday == weekday && session.occursInWeek(displayWeek)) {
+        if (session.weekday == weekday && session.occursInWeek(_displayWeek)) {
           result.add(ScheduledCourse(course: course, session: session));
         }
       }
@@ -51,13 +82,84 @@ class TimetablePage extends StatelessWidget {
     return result;
   }
 
+  String get _weekLabel => _displayWeek == widget.currentWeek
+      ? '第 $_displayWeek 周 · 本周'
+      : '第 $_displayWeek 周';
+
+  Widget _weekSelector(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 4,
+      children: [
+        PopupMenuButton<int>(
+          key: const Key('week_selector'),
+          initialValue: _displayWeek,
+          tooltip: '选择周次',
+          onSelected: (week) => setState(() => _displayWeek = week),
+          itemBuilder: (context) => List.generate(
+            widget.semester.totalWeeks,
+            (index) {
+              final week = index + 1;
+              return PopupMenuItem<int>(
+                value: week,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        week == widget.currentWeek
+                            ? '第 $week 周 · 本周'
+                            : '第 $week 周',
+                      ),
+                    ),
+                    if (week == _displayWeek)
+                      const Icon(Icons.check_rounded, size: 18),
+                  ],
+                ),
+              );
+            },
+          ),
+          child: Semantics(
+            button: true,
+            label: '选择周次，当前$_weekLabel',
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _weekLabel,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: color),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(Icons.arrow_drop_down_rounded, color: color),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (widget.currentWeek != null &&
+            _displayWeek != widget.currentWeek)
+          TextButton(
+            key: const Key('return_to_current_week'),
+            onPressed: () => setState(
+              () => _displayWeek = _clampWeek(widget.currentWeek!),
+            ),
+            child: const Text('回到本周'),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: onAdd == null
+      floatingActionButton: widget.onAdd == null
           ? null
           : FloatingActionButton.extended(
-              onPressed: onAdd,
+              onPressed: widget.onAdd,
               icon: const Icon(Icons.add_rounded),
               label: const Text('添加课程'),
               tooltip: '添加课程',
@@ -81,7 +183,7 @@ class TimetablePage extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${semester.name} · 第 $displayWeek 周',
+                            widget.semester.name,
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: Theme.of(
@@ -89,27 +191,30 @@ class TimetablePage extends StatelessWidget {
                                   ).colorScheme.onSurfaceVariant,
                                 ),
                           ),
+                          _weekSelector(context),
                         ],
                       ),
                     ),
-                    if (onImport != null)
+                    if (widget.onImport != null)
                       Tooltip(
                         message: '导入课表',
                         child: FilledButton.tonalIcon(
-                          onPressed: onImport,
+                          onPressed: widget.onImport,
                           icon: const Icon(Icons.file_download_outlined),
                           label: const Text('导入课表'),
                         ),
                       ),
                     const SizedBox(width: 8),
                     IconButton.filledTonal(
-                      onPressed: onReminders,
+                      onPressed: widget.onReminders,
                       icon: Icon(
-                        remindersEnabled
+                        widget.remindersEnabled
                             ? Icons.notifications_active_rounded
                             : Icons.notifications_none_rounded,
                       ),
-                      tooltip: remindersEnabled ? '提醒已开启' : '提醒未开启',
+                      tooltip: widget.remindersEnabled
+                          ? '提醒已开启'
+                          : '提醒未开启',
                     ),
                   ],
                 ),
@@ -124,8 +229,8 @@ class TimetablePage extends StatelessWidget {
                   return _DaySection(
                     name: _weekdayNames[index],
                     courses: _coursesFor(weekday),
-                    onEdit: onEdit,
-                    onDelete: onDelete,
+                    onEdit: widget.onEdit,
+                    onDelete: widget.onDelete,
                   );
                 },
               ),
