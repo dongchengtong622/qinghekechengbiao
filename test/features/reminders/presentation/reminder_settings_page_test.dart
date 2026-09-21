@@ -84,10 +84,7 @@ void main() {
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.text('提醒可能因系统限制而延迟'),
-      200,
-    );
+    await tester.scrollUntilVisible(find.text('提醒可能因系统限制而延迟'), 200);
     expect(find.text('提醒可能因系统限制而延迟'), findsOneWidget);
     expect(await repository.watchRemindersEnabled().first, isTrue);
   });
