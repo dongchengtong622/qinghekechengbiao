@@ -1,7 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_10y.dart' as timezone_data;
 import 'package:timezone/timezone.dart' as timezone;
 
+import '../../../core/time/shanghai_time.dart';
 import '../domain/reminder_models.dart';
 
 abstract interface class ReminderScheduler {
@@ -102,7 +102,6 @@ class FlutterLocalNotificationGateway implements NotificationGateway {
 
   final FlutterLocalNotificationsPlugin _plugin;
   final void Function(String? payload)? onNotificationTap;
-  late timezone.Location _shanghai;
 
   AndroidFlutterLocalNotificationsPlugin? get _android => _plugin
       .resolvePlatformSpecificImplementation<
@@ -111,8 +110,7 @@ class FlutterLocalNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> initialize() async {
-    timezone_data.initializeTimeZones();
-    _shanghai = timezone.getLocation('Asia/Shanghai');
+    ShanghaiTime.ensureInitialized();
     await _plugin.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
@@ -151,25 +149,20 @@ class FlutterLocalNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> schedule(CourseReminder reminder, {required bool exact}) async {
-    final scheduledAt = reminder.scheduledAt;
     await _plugin.zonedSchedule(
       id: reminder.id,
       title: reminder.title,
       body: reminder.body,
-      scheduledDate: timezone.TZDateTime(
-        _shanghai,
-        scheduledAt.year,
-        scheduledAt.month,
-        scheduledAt.day,
-        scheduledAt.hour,
-        scheduledAt.minute,
-        scheduledAt.second,
-      ),
+      scheduledDate: toShanghaiSchedule(reminder.scheduledAt),
       notificationDetails: _notificationDetails(reminder.sound),
       androidScheduleMode: exact
           ? AndroidScheduleMode.exactAllowWhileIdle
           : AndroidScheduleMode.inexactAllowWhileIdle,
       payload: reminder.payload,
     );
+  }
+
+  static timezone.TZDateTime toShanghaiSchedule(DateTime value) {
+    return ShanghaiTime.fromUtc(value.toUtc());
   }
 }
