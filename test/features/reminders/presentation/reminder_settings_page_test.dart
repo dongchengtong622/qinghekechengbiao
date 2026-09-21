@@ -50,7 +50,7 @@ void main() {
   ) async {
     await pumpPage(tester);
 
-    expect(scheduler.requestCalls, 0);
+    expect(scheduler.notificationRequestCalls, 0);
     expect(find.text('提前 30 分钟'), findsOneWidget);
     expect(find.byType(Switch), findsOneWidget);
   });
@@ -147,9 +147,7 @@ void main() {
       notificationsAllowed: true,
       exactAlarmsAllowed: false,
     );
-    await tester.binding.handleAppLifecycleStateChanged(
-      AppLifecycleState.resumed,
-    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('request_exact_alarm_permission')));
     await tester.pumpAndSettle();
