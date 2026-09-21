@@ -97,28 +97,26 @@ class _TimetablePageState extends State<TimetablePage> {
           initialValue: _displayWeek,
           tooltip: '选择周次',
           onSelected: (week) => setState(() => _displayWeek = week),
-          itemBuilder: (context) => List.generate(
-            widget.semester.totalWeeks,
-            (index) {
-              final week = index + 1;
-              return PopupMenuItem<int>(
-                value: week,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        week == widget.currentWeek
-                            ? '第 $week 周 · 本周'
-                            : '第 $week 周',
+          itemBuilder: (context) =>
+              List.generate(widget.semester.totalWeeks, (index) {
+                final week = index + 1;
+                return PopupMenuItem<int>(
+                  value: week,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          week == widget.currentWeek
+                              ? '第 $week 周 · 本周'
+                              : '第 $week 周',
+                        ),
                       ),
-                    ),
-                    if (week == _displayWeek)
-                      const Icon(Icons.check_rounded, size: 18),
-                  ],
-                ),
-              );
-            },
-          ),
+                      if (week == _displayWeek)
+                        const Icon(Icons.check_rounded, size: 18),
+                    ],
+                  ),
+                );
+              }),
           child: Semantics(
             button: true,
             label: '选择周次，当前$_weekLabel',
@@ -140,13 +138,11 @@ class _TimetablePageState extends State<TimetablePage> {
             ),
           ),
         ),
-        if (widget.currentWeek != null &&
-            _displayWeek != widget.currentWeek)
+        if (widget.currentWeek != null && _displayWeek != widget.currentWeek)
           TextButton(
             key: const Key('return_to_current_week'),
-            onPressed: () => setState(
-              () => _displayWeek = _clampWeek(widget.currentWeek!),
-            ),
+            onPressed: () =>
+                setState(() => _displayWeek = _clampWeek(widget.currentWeek!)),
             child: const Text('回到本周'),
           ),
       ],
@@ -212,9 +208,7 @@ class _TimetablePageState extends State<TimetablePage> {
                             ? Icons.notifications_active_rounded
                             : Icons.notifications_none_rounded,
                       ),
-                      tooltip: widget.remindersEnabled
-                          ? '提醒已开启'
-                          : '提醒未开启',
+                      tooltip: widget.remindersEnabled ? '提醒已开启' : '提醒未开启',
                     ),
                   ],
                 ),
