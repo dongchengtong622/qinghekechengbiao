@@ -96,8 +96,7 @@ flutter {
     final temporary = Directory.systemTemp.createTempSync('qinghe-sound-');
     addTearDown(() => temporary.deleteSync(recursive: true));
     final app = Directory('${temporary.path}/app')..createSync(recursive: true);
-    final main = Directory('${app.path}/src/main')
-      ..createSync(recursive: true);
+    final main = Directory('${app.path}/src/main')..createSync(recursive: true);
     File('${app.path}/build.gradle.kts').writeAsStringSync('''
 android { compileOptions {} defaultConfig {} }
 flutter {}
@@ -117,10 +116,7 @@ flutter {}
     }
 
     expect(
-      () => configurator.configureAndroid(
-        temporary,
-        sourceDirectory: source,
-      ),
+      () => configurator.configureAndroid(temporary, sourceDirectory: source),
       throwsA(isA<FormatException>()),
     );
   });
