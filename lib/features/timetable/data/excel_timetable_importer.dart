@@ -69,8 +69,8 @@ class ExcelTimetableImporter {
       return parseRows(selectedRows);
     } on ExcelImportException {
       rethrow;
-    } catch (_) {
-      throw const ExcelImportException('无法读取该 Excel 文件，请确认文件为 .xlsx 格式。');
+    } catch (error) {
+      throw ExcelImportException('无法读取该 Excel 文件：$error');
     }
   }
 
