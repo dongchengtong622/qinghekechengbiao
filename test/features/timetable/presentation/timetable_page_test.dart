@@ -70,7 +70,7 @@ void main() {
     await tester.pumpWidget(page(sampleSemester, 3));
     await tester.tap(find.byKey(const Key('week_selector')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('第 10 周').last);
+    await tester.tap(find.text('第 5 周').last);
     await tester.pumpAndSettle();
 
     final nextSemester = Semester(
