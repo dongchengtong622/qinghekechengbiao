@@ -1,4 +1,12 @@
-enum ReminderPermissionState { grantedExact, grantedInexact, denied }
+class ReminderPermissionStatus {
+  const ReminderPermissionStatus({
+    required this.notificationsAllowed,
+    required this.exactAlarmsAllowed,
+  });
+
+  final bool notificationsAllowed;
+  final bool exactAlarmsAllowed;
+}
 
 enum ReminderSound { systemDefault, chime, soft, alert }
 
