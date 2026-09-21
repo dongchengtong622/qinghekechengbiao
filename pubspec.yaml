@@ -1,7 +1,7 @@
 name: qinghe_timetable
 description: 青禾课表——面向大学生的跨平台智能课程表。
 publish_to: none
-version: 0.3.0+3
+version: 0.4.0+4
 
 environment:
   sdk: ^3.10.0
