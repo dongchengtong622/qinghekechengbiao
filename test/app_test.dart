@@ -18,6 +18,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('高等数学'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('大学英语'), 300);
     expect(find.text('大学英语'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
