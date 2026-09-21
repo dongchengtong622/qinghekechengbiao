@@ -7,9 +7,13 @@ import '../domain/reminder_models.dart';
 abstract interface class ReminderScheduler {
   Future<void> replaceAll(List<CourseReminder> reminders);
 
-  Future<ReminderPermissionState> requestPermissions();
+  Future<ReminderPermissionStatus> requestNotificationPermission();
 
-  Future<ReminderPermissionState> permissionState();
+  Future<ReminderPermissionStatus> requestExactAlarmPermission();
+
+  Future<void> openNotificationSettings();
+
+  Future<ReminderPermissionStatus> permissionStatus();
 }
 
 abstract interface class NotificationGateway {
@@ -17,9 +21,13 @@ abstract interface class NotificationGateway {
 
   Future<void> cancelAll();
 
-  Future<ReminderPermissionState> requestPermissions();
+  Future<ReminderPermissionStatus> requestNotificationPermission();
 
-  Future<ReminderPermissionState> permissionState();
+  Future<ReminderPermissionStatus> requestExactAlarmPermission();
+
+  Future<void> openNotificationSettings();
+
+  Future<ReminderPermissionStatus> permissionStatus();
 
   Future<void> schedule(CourseReminder reminder, {required bool exact});
 }
@@ -36,9 +44,9 @@ class AndroidReminderScheduler implements ReminderScheduler {
   }
 
   @override
-  Future<ReminderPermissionState> permissionState() async {
+  Future<ReminderPermissionStatus> permissionStatus() async {
     await _ensureInitialized();
-    return gateway.permissionState();
+    return gateway.permissionStatus();
   }
 
   @override
@@ -53,18 +61,30 @@ class AndroidReminderScheduler implements ReminderScheduler {
   Future<void> _replaceAllNow(List<CourseReminder> reminders) async {
     await _ensureInitialized();
     await gateway.cancelAll();
-    final permission = await gateway.permissionState();
-    if (permission == ReminderPermissionState.denied) return;
-    final exact = permission == ReminderPermissionState.grantedExact;
+    final permission = await gateway.permissionStatus();
+    if (!permission.notificationsAllowed) return;
+    final exact = permission.exactAlarmsAllowed;
     for (final reminder in reminders) {
       await gateway.schedule(reminder, exact: exact);
     }
   }
 
   @override
-  Future<ReminderPermissionState> requestPermissions() async {
+  Future<ReminderPermissionStatus> requestNotificationPermission() async {
     await _ensureInitialized();
-    return gateway.requestPermissions();
+    return gateway.requestNotificationPermission();
+  }
+
+  @override
+  Future<ReminderPermissionStatus> requestExactAlarmPermission() async {
+    await _ensureInitialized();
+    return gateway.requestExactAlarmPermission();
+  }
+
+  @override
+  Future<void> openNotificationSettings() async {
+    await _ensureInitialized();
+    await gateway.openNotificationSettings();
   }
 }
 
@@ -75,16 +95,20 @@ class FlutterLocalNotificationGateway implements NotificationGateway {
   }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   static const channelId = 'qinghe_course_reminders';
+  static String channelIdFor(ReminderSound sound) => '${channelId}_${sound.name}';
+
+  static String? resourceNameFor(ReminderSound sound) => switch (sound) {
+    ReminderSound.systemDefault => null,
+    ReminderSound.chime => 'qinghe_chime',
+    ReminderSound.soft => 'qinghe_soft',
+    ReminderSound.alert => 'qinghe_alert',
+  };
+
   NotificationDetails _notificationDetails(ReminderSound sound) {
-    final resourceName = switch (sound) {
-      ReminderSound.systemDefault => null,
-      ReminderSound.chime => 'qinghe_chime',
-      ReminderSound.soft => 'qinghe_soft',
-      ReminderSound.alert => 'qinghe_alert',
-    };
+    final resourceName = resourceNameFor(sound);
     return NotificationDetails(
       android: AndroidNotificationDetails(
-        '${channelId}_${sound.name}',
+        channelIdFor(sound),
         '课程提醒',
         channelDescription: '按设定时间提醒课程',
         importance: Importance.max,
@@ -125,26 +149,31 @@ class FlutterLocalNotificationGateway implements NotificationGateway {
   Future<void> cancelAll() => _plugin.cancelAll();
 
   @override
-  Future<ReminderPermissionState> permissionState() async {
+  Future<ReminderPermissionStatus> permissionStatus() async {
     final android = _android;
     final notifications = await android?.areNotificationsEnabled() ?? false;
-    if (!notifications) return ReminderPermissionState.denied;
     final exact = await android?.canScheduleExactNotifications() ?? false;
-    return exact
-        ? ReminderPermissionState.grantedExact
-        : ReminderPermissionState.grantedInexact;
+    return ReminderPermissionStatus(
+      notificationsAllowed: notifications,
+      exactAlarmsAllowed: exact,
+    );
   }
 
   @override
-  Future<ReminderPermissionState> requestPermissions() async {
-    final android = _android;
-    final notifications =
-        await android?.requestNotificationsPermission() ?? false;
-    if (!notifications) return ReminderPermissionState.denied;
-    final exact = await android?.requestExactAlarmsPermission() ?? false;
-    return exact
-        ? ReminderPermissionState.grantedExact
-        : ReminderPermissionState.grantedInexact;
+  Future<ReminderPermissionStatus> requestNotificationPermission() async {
+    await _android?.requestNotificationsPermission();
+    return permissionStatus();
+  }
+
+  @override
+  Future<ReminderPermissionStatus> requestExactAlarmPermission() async {
+    await _android?.requestExactAlarmsPermission();
+    return permissionStatus();
+  }
+
+  @override
+  Future<void> openNotificationSettings() async {
+    await _android?.openAppNotificationSettings();
   }
 
   @override
