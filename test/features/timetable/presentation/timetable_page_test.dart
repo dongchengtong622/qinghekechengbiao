@@ -11,15 +11,79 @@ void main() {
         home: TimetablePage(
           semester: sampleSemester,
           courses: sampleCourses,
-          displayWeek: 3,
+          initialDisplayWeek: 3,
+          currentWeek: 3,
         ),
       ),
     );
 
     expect(find.text('青禾课表'), findsOneWidget);
-    expect(find.text('2026 秋季学期 · 第 3 周'), findsOneWidget);
+    expect(find.text('2026 秋季学期'), findsOneWidget);
+    expect(find.text('第 3 周 · 本周'), findsOneWidget);
     expect(find.text('高等数学'), findsOneWidget);
     expect(find.textContaining('A302'), findsOneWidget);
+  });
+
+  testWidgets('selects any semester week and returns to the current week', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimetablePage(
+          semester: sampleSemester,
+          courses: sampleCourses,
+          initialDisplayWeek: 3,
+          currentWeek: 3,
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('week_selector')));
+    await tester.pumpAndSettle();
+    expect(find.text('第 1 周'), findsOneWidget);
+    expect(find.text('第 18 周'), findsOneWidget);
+    await tester.tap(find.text('第 5 周').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('第 5 周'), findsOneWidget);
+    expect(find.byKey(const Key('return_to_current_week')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('return_to_current_week')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('第 3 周 · 本周'), findsOneWidget);
+    expect(find.byKey(const Key('return_to_current_week')), findsNothing);
+  });
+
+  testWidgets('resets the selected week when the semester changes', (
+    tester,
+  ) async {
+    Widget page(Semester semester, int week) => MaterialApp(
+      home: TimetablePage(
+        semester: semester,
+        courses: const [],
+        initialDisplayWeek: week,
+        currentWeek: week,
+      ),
+    );
+
+    await tester.pumpWidget(page(sampleSemester, 3));
+    await tester.tap(find.byKey(const Key('week_selector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('第 10 周').last);
+    await tester.pumpAndSettle();
+
+    final nextSemester = Semester(
+      id: 'sample-2027-spring',
+      name: '2027 春季学期',
+      firstWeekStart: DateTime(2027, 2, 22),
+      totalWeeks: 4,
+    );
+    await tester.pumpWidget(page(nextSemester, 2));
+    await tester.pumpAndSettle();
+
+    expect(find.text('第 2 周 · 本周'), findsOneWidget);
+    expect(find.byKey(const Key('return_to_current_week')), findsNothing);
   });
 
   testWidgets('shows a course custom time range', (tester) async {
@@ -51,7 +115,8 @@ void main() {
         home: TimetablePage(
           semester: sampleSemester,
           courses: [custom],
-          displayWeek: 3,
+          initialDisplayWeek: 3,
+          currentWeek: 3,
         ),
       ),
     );
@@ -67,7 +132,8 @@ void main() {
         home: TimetablePage(
           semester: sampleSemester,
           courses: sampleCourses,
-          displayWeek: 3,
+          initialDisplayWeek: 3,
+          currentWeek: 3,
           onAdd: () => added = true,
           onEdit: (course) => edited = course,
         ),
@@ -91,7 +157,8 @@ void main() {
         home: TimetablePage(
           semester: sampleSemester,
           courses: sampleCourses,
-          displayWeek: 3,
+          initialDisplayWeek: 3,
+          currentWeek: 3,
           onImport: () => imported = true,
           onReminders: () => remindersOpened = true,
         ),
@@ -111,7 +178,8 @@ void main() {
         home: TimetablePage(
           semester: sampleSemester,
           courses: sampleCourses,
-          displayWeek: 3,
+          initialDisplayWeek: 3,
+          currentWeek: 3,
           remindersEnabled: true,
         ),
       ),
@@ -128,7 +196,8 @@ void main() {
         home: TimetablePage(
           semester: sampleSemester,
           courses: sampleCourses,
-          displayWeek: 3,
+          initialDisplayWeek: 3,
+          currentWeek: 3,
           onDelete: (course) => deleted = course,
         ),
       ),
