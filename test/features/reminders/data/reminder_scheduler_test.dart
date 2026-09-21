@@ -26,7 +26,10 @@ void main() {
   test(
     'initializes once and cancels old reminders before replacement',
     () async {
-      gateway.permission = ReminderPermissionState.grantedExact;
+      gateway.permission = const ReminderPermissionStatus(
+        notificationsAllowed: true,
+        exactAlarmsAllowed: true,
+      );
 
       await scheduler.replaceAll([reminder]);
       await scheduler.replaceAll([reminder]);
@@ -44,7 +47,10 @@ void main() {
   test(
     'serializes concurrent replacements so the latest request wins',
     () async {
-      gateway.permission = ReminderPermissionState.grantedExact;
+      gateway.permission = const ReminderPermissionStatus(
+        notificationsAllowed: true,
+        exactAlarmsAllowed: true,
+      );
       gateway.pauseFirstSchedule = true;
       final first = scheduler.replaceAll([reminder]);
       await gateway.firstScheduleStarted.future;
@@ -70,7 +76,10 @@ void main() {
   );
 
   test('uses inexact scheduling when exact alarms are unavailable', () async {
-    gateway.permission = ReminderPermissionState.grantedInexact;
+    gateway.permission = const ReminderPermissionStatus(
+      notificationsAllowed: true,
+      exactAlarmsAllowed: false,
+    );
 
     await scheduler.replaceAll([reminder]);
 
@@ -78,7 +87,10 @@ void main() {
   });
 
   test('does not schedule when notification permission is denied', () async {
-    gateway.permission = ReminderPermissionState.denied;
+    gateway.permission = const ReminderPermissionStatus(
+      notificationsAllowed: false,
+      exactAlarmsAllowed: false,
+    );
 
     await scheduler.replaceAll([reminder]);
 
@@ -86,23 +98,49 @@ void main() {
   });
 
   test(
-    'requests permissions only through the explicit request method',
+    'keeps notification and exact-alarm permission actions separate',
     () async {
-      gateway.permission = ReminderPermissionState.grantedInexact;
-
-      expect(
-        await scheduler.permissionState(),
-        ReminderPermissionState.grantedInexact,
+      gateway.permission = const ReminderPermissionStatus(
+        notificationsAllowed: true,
+        exactAlarmsAllowed: false,
       );
-      expect(gateway.requestCalls, 0);
 
-      expect(
-        await scheduler.requestPermissions(),
-        ReminderPermissionState.grantedInexact,
-      );
-      expect(gateway.requestCalls, 1);
+      final status = await scheduler.permissionStatus();
+      expect(status.notificationsAllowed, isTrue);
+      expect(status.exactAlarmsAllowed, isFalse);
+      expect(gateway.notificationRequestCalls, 0);
+      expect(gateway.exactAlarmRequestCalls, 0);
+
+      await scheduler.requestNotificationPermission();
+      await scheduler.requestExactAlarmPermission();
+      await scheduler.openNotificationSettings();
+
+      expect(gateway.notificationRequestCalls, 1);
+      expect(gateway.exactAlarmRequestCalls, 1);
+      expect(gateway.openNotificationSettingsCalls, 1);
     },
   );
+
+  test('uses distinct channels and matching raw resources for each sound', () {
+    expect(
+      ReminderSound.values
+          .map(FlutterLocalNotificationGateway.channelIdFor)
+          .toSet(),
+      hasLength(ReminderSound.values.length),
+    );
+    expect(
+      FlutterLocalNotificationGateway.resourceNameFor(ReminderSound.chime),
+      'qinghe_chime',
+    );
+    expect(
+      FlutterLocalNotificationGateway.resourceNameFor(ReminderSound.soft),
+      'qinghe_soft',
+    );
+    expect(
+      FlutterLocalNotificationGateway.resourceNameFor(ReminderSound.alert),
+      'qinghe_alert',
+    );
+  });
 
   test('normalizes scheduled instants to the Shanghai location', () {
     final result = FlutterLocalNotificationGateway.toShanghaiSchedule(
@@ -116,9 +154,14 @@ void main() {
 }
 
 class FakeNotificationGateway implements NotificationGateway {
-  ReminderPermissionState permission = ReminderPermissionState.denied;
+  ReminderPermissionStatus permission = const ReminderPermissionStatus(
+    notificationsAllowed: false,
+    exactAlarmsAllowed: false,
+  );
   int initializeCalls = 0;
-  int requestCalls = 0;
+  int notificationRequestCalls = 0;
+  int exactAlarmRequestCalls = 0;
+  int openNotificationSettingsCalls = 0;
   final events = <String>[];
   bool pauseFirstSchedule = false;
   final firstScheduleStarted = Completer<void>();
@@ -133,11 +176,22 @@ class FakeNotificationGateway implements NotificationGateway {
   }
 
   @override
-  Future<ReminderPermissionState> permissionState() async => permission;
+  Future<ReminderPermissionStatus> permissionStatus() async => permission;
 
   @override
-  Future<ReminderPermissionState> requestPermissions() async {
-    requestCalls++;
+  Future<void> openNotificationSettings() async {
+    openNotificationSettingsCalls++;
+  }
+
+  @override
+  Future<ReminderPermissionStatus> requestExactAlarmPermission() async {
+    exactAlarmRequestCalls++;
+    return permission;
+  }
+
+  @override
+  Future<ReminderPermissionStatus> requestNotificationPermission() async {
+    notificationRequestCalls++;
     return permission;
   }
 
