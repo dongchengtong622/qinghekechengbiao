@@ -28,13 +28,23 @@ void main() {
 
 class _FakeScheduler implements ReminderScheduler {
   @override
-  Future<ReminderPermissionState> permissionState() async =>
-      ReminderPermissionState.denied;
+  Future<ReminderPermissionStatus> permissionStatus() async =>
+      const ReminderPermissionStatus(
+        notificationsAllowed: false,
+        exactAlarmsAllowed: false,
+      );
 
   @override
   Future<void> replaceAll(List<CourseReminder> reminders) async {}
 
   @override
-  Future<ReminderPermissionState> requestPermissions() async =>
-      ReminderPermissionState.denied;
+  Future<void> openNotificationSettings() async {}
+
+  @override
+  Future<ReminderPermissionStatus> requestExactAlarmPermission() async =>
+      permissionStatus();
+
+  @override
+  Future<ReminderPermissionStatus> requestNotificationPermission() async =>
+      permissionStatus();
 }
