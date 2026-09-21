@@ -7,7 +7,9 @@ import '../../tool/configure_android.dart' as configurator;
 void main() {
   test('release metadata exposes every requested Android artifact', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
-    final workflow = File('.github/workflows/flutter-ci.yml').readAsStringSync();
+    final workflow = File(
+      '.github/workflows/flutter-ci.yml',
+    ).readAsStringSync();
     final readme = File('README.md').readAsStringSync();
 
     expect(pubspec, contains('version: 0.4.0+4'));
