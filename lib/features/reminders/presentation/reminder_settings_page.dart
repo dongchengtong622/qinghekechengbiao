@@ -24,29 +24,49 @@ class ReminderSettingsPage extends StatefulWidget {
   State<ReminderSettingsPage> createState() => _ReminderSettingsPageState();
 }
 
-class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
+class _ReminderSettingsPageState extends State<ReminderSettingsPage>
+    with WidgetsBindingObserver {
   bool _loading = true;
   bool _enabled = false;
   int _leadMinutes = 30;
   ReminderSound _sound = ReminderSound.systemDefault;
-  ReminderPermissionState _permission = ReminderPermissionState.denied;
+  ReminderPermissionStatus _permission = const ReminderPermissionStatus(
+    notificationsAllowed: false,
+    exactAlarmsAllowed: false,
+  );
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_load());
   }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_load(reschedule: true));
+    }
+  }
+
+  Future<void> _load({bool reschedule = false}) async {
     try {
       final preferences = await widget.repository
           .watchReminderPreferences()
           .first;
-      final permission = await widget.scheduler.permissionState();
+      final permission = await widget.scheduler.permissionStatus();
+      final enabled =
+          preferences.enabled && permission.notificationsAllowed;
+      if (reschedule && enabled) await widget.onChanged(true);
       if (!mounted) return;
       setState(() {
-        _enabled =
-            preferences.enabled && permission != ReminderPermissionState.denied;
+        _enabled = enabled;
         _leadMinutes = preferences.leadMinutes;
         _sound = preferences.sound;
         _permission = permission;
@@ -105,8 +125,9 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
         return;
       }
 
-      final permission = await widget.scheduler.requestPermissions();
-      final accepted = permission != ReminderPermissionState.denied;
+      final permission = await widget.scheduler
+          .requestNotificationPermission();
+      final accepted = permission.notificationsAllowed;
       await widget.repository.setRemindersEnabled(accepted);
       if (accepted) await widget.onChanged(true);
       if (!mounted) return;
@@ -129,10 +150,47 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
     }
   }
 
+  Future<void> _requestNotificationPermission() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final permission = await widget.scheduler
+          .requestNotificationPermission();
+      if (!mounted) return;
+      setState(() => _permission = permission);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _requestExactAlarmPermission() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final permission = await widget.scheduler.requestExactAlarmPermission();
+      if (_enabled) await widget.onChanged(true);
+      if (!mounted) return;
+      setState(() => _permission = permission);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _openNotificationSettings() async {
+    await widget.scheduler.openNotificationSettings();
+  }
+
+  String get _scheduleMode {
+    if (!_permission.notificationsAllowed) return '已禁用';
+    return _permission.exactAlarmsAllowed ? '精确' : '非精确（可能延迟）';
+  }
+
   @override
   Widget build(BuildContext context) {
     final delayed =
-        _enabled && _permission == ReminderPermissionState.grantedInexact;
+        _enabled &&
+        _permission.notificationsAllowed &&
+        !_permission.exactAlarmsAllowed;
     return Scaffold(
       appBar: AppBar(title: const Text('课程提醒')),
       body: ListView(
@@ -146,6 +204,61 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
               ),
               value: _enabled,
               onChanged: _loading ? null : _setEnabled,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text('通知权限'),
+                  subtitle: Text(
+                    _permission.notificationsAllowed ? '已开启' : '未开启',
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        key: const Key('request_notification_permission'),
+                        tooltip: '请求通知权限',
+                        onPressed: _loading
+                            ? null
+                            : _requestNotificationPermission,
+                        icon: const Icon(Icons.notifications_active_outlined),
+                      ),
+                      IconButton(
+                        key: const Key('open_notification_settings'),
+                        tooltip: '打开通知设置',
+                        onPressed: _loading ? null : _openNotificationSettings,
+                        icon: const Icon(Icons.settings_outlined),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  title: const Text('精确闹钟权限'),
+                  subtitle: Text(
+                    _permission.exactAlarmsAllowed ? '已开启' : '未开启',
+                  ),
+                  trailing:
+                      _permission.notificationsAllowed &&
+                          !_permission.exactAlarmsAllowed
+                      ? TextButton(
+                          key: const Key('request_exact_alarm_permission'),
+                          onPressed: _loading
+                              ? null
+                              : _requestExactAlarmPermission,
+                          child: const Text('去开启'),
+                        )
+                      : null,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  title: const Text('当前调度模式'),
+                  subtitle: Text(_scheduleMode),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
@@ -202,14 +315,6 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                 leading: Icon(Icons.schedule_rounded),
                 title: Text('提醒可能因系统限制而延迟'),
                 subtitle: Text('未获得精确闹钟权限，将使用系统允许的非精确调度。'),
-              ),
-            )
-          else if (!_loading && _permission == ReminderPermissionState.denied)
-            const Card(
-              child: ListTile(
-                leading: Icon(Icons.notifications_off_outlined),
-                title: Text('通知权限未开启'),
-                subtitle: Text('开启开关后，系统会请求通知权限。'),
               ),
             ),
         ],
