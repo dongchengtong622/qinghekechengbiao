@@ -5,6 +5,26 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../tool/configure_android.dart' as configurator;
 
 void main() {
+  test('release metadata exposes every requested Android artifact', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    final workflow = File('.github/workflows/flutter-ci.yml').readAsStringSync();
+    final readme = File('README.md').readAsStringSync();
+
+    expect(pubspec, contains('version: 0.4.0+4'));
+    expect(workflow, contains('flutter build apk --release'));
+    expect(
+      workflow,
+      contains('flutter build apk --release --target-platform android-arm64'),
+    );
+    expect(workflow, contains('flutter build appbundle --release'));
+    expect(workflow, contains('qinghe-timetable-0.4.0-universal.apk'));
+    expect(workflow, contains('qinghe-timetable-0.4.0-arm64.apk'));
+    expect(workflow, contains('qinghe-timetable-0.4.0.aab'));
+    expect(readme, contains('flutter create . --platforms=android,ios,windows'));
+    expect(readme, contains('dart run tool/configure_android.dart'));
+    expect(readme, contains('dart run build_runner build'));
+  });
+
   test('configures the generated Android project idempotently', () {
     final temporary = Directory.systemTemp.createTempSync('qinghe-android-');
     addTearDown(() => temporary.deleteSync(recursive: true));
