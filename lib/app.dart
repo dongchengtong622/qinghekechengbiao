@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import 'core/time/shanghai_time.dart';
 import 'core/theme/app_theme.dart';
 import 'features/timetable/data/app_database.dart';
 import 'features/reminders/data/reminder_scheduler.dart';
@@ -104,7 +105,7 @@ class _QingheAppState extends State<QingheApp> with WidgetsBindingObserver {
       widget.reminderPlanner.plan(
         semester: semester,
         courses: courses,
-        now: DateTime.now(),
+        now: ShanghaiTime.now(),
         leadTime: Duration(minutes: preferences.leadMinutes),
         sound: preferences.sound,
       ),
