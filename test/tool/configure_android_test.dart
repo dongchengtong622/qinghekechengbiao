@@ -114,8 +114,8 @@ flutter {
       'qinghe_alert.wav',
     ]) {
       expect(
-        File('${main.path}/res/raw/$name').readAsBytesSync(),
-        startsWith([0x52, 0x49, 0x46, 0x46]),
+        File('${main.path}/res/raw/$name').readAsBytesSync().take(4),
+        orderedEquals([0x52, 0x49, 0x46, 0x46]),
       );
     }
   });
