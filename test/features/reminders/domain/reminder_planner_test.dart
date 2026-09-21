@@ -74,7 +74,10 @@ void main() {
       now: DateTime(2026, 9, 1),
     );
 
-    expect(reminders.first.scheduledAt, DateTime(2026, 9, 7, 7, 55));
+    expect(
+      reminders.first.scheduledAt,
+      ShanghaiTime.dateTime(2026, 9, 7, 7, 55),
+    );
     expect(reminders.first.title, '30分钟后上课：高等数学');
     expect(reminders.first.body, '第1-2节 · A302 · 陈老师');
     expect(reminders.first.payload, 'math');
@@ -113,7 +116,10 @@ void main() {
       sound: ReminderSound.soft,
     );
 
-    expect(reminders.first.scheduledAt, DateTime(2026, 9, 7, 9, 30));
+    expect(
+      reminders.first.scheduledAt,
+      ShanghaiTime.dateTime(2026, 9, 7, 9, 30),
+    );
     expect(reminders.first.title, '10分钟后上课：高等数学');
     expect(reminders.first.sound, ReminderSound.soft);
   });
@@ -134,8 +140,8 @@ void main() {
     );
 
     expect(reminders.map((item) => item.scheduledAt), [
-      DateTime(2026, 9, 16, 13, 10),
-      DateTime(2026, 9, 30, 13, 10),
+      ShanghaiTime.dateTime(2026, 9, 16, 13, 10),
+      ShanghaiTime.dateTime(2026, 9, 30, 13, 10),
     ]);
   });
 
@@ -156,7 +162,10 @@ void main() {
 
     expect(reminders, hasLength(4));
     expect(reminders.first.payload, 'english');
-    expect(reminders.first.scheduledAt, DateTime(2026, 9, 11, 19, 55));
+    expect(
+      reminders.first.scheduledAt,
+      ShanghaiTime.dateTime(2026, 9, 11, 19, 55),
+    );
   });
 
   test('notification IDs are stable, positive, and unique by week', () {
