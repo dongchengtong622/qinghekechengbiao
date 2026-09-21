@@ -28,7 +28,22 @@ void _copyNotificationSounds(Directory sourceDirectory, Directory target) {
     'qinghe_soft.wav',
     'qinghe_alert.wav',
   ]) {
-    File('${source.path}/$name').copySync('${target.path}/$name');
+    final file = File('${source.path}/$name');
+    final bytes = file.readAsBytesSync();
+    final isWave =
+        bytes.length >= 12 &&
+        bytes[0] == 0x52 &&
+        bytes[1] == 0x49 &&
+        bytes[2] == 0x46 &&
+        bytes[3] == 0x46 &&
+        bytes[8] == 0x57 &&
+        bytes[9] == 0x41 &&
+        bytes[10] == 0x56 &&
+        bytes[11] == 0x45;
+    if (!isWave) {
+      throw FormatException('通知铃声不是有效的 RIFF/WAVE 文件：$name');
+    }
+    file.copySync('${target.path}/$name');
   }
 }
 
