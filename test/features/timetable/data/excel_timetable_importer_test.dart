@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qinghe_timetable/features/timetable/data/excel_timetable_importer.dart';
 import 'package:qinghe_timetable/features/timetable/domain/models.dart';
@@ -53,6 +55,49 @@ void main() {
           contains('星期'),
         ),
       ),
+    );
+  });
+
+  test('accepts common aliases and keeps valid rows around a warning', () {
+    final preview = importer.parseRows([
+      ['学期', '2026-2027学年第1学期'],
+      ['第一周日期', '2026-09-07'],
+      ['总周数', 18],
+      <Object?>[],
+      ['课程', '任课教师', '上课星期', '上课节次', '上课周次', '上课地点'],
+      ['景观设计', '李老师', '星期一', '第1-2节', '1-18周', 'A302'],
+      ['无效课程', '王老师', '星期九', '第3-4节', '1-18周', 'A303'],
+      ['景观设计', '李老师', '星期三', '第3-4节', '1,3,5周', 'B201'],
+    ]);
+
+    expect(preview.courses, hasLength(1));
+    expect(preview.courses.single.sessions, hasLength(4));
+    expect(
+      preview.courses.single.sessions.map((session) => session.startWeek),
+      [1, 1, 3, 5],
+    );
+    expect(preview.warnings, hasLength(1));
+    expect(preview.warnings.single, contains('第 7 行'));
+    expect(preview.warnings.single, contains('无效课程'));
+  });
+
+  test('selects timetable sheet from the real xlsx fixture', () {
+    final bytes = File(
+      'test/fixtures/qinghe_timetable_import_template.xlsx',
+    ).readAsBytesSync();
+
+    final preview = importer.parseBytes(bytes);
+
+    expect(preview.semester.name, '2026-2027学年第1学期');
+    expect(preview.semester.firstWeekStart, DateTime(2026, 8, 31));
+    expect(preview.semester.totalWeeks, 16);
+    expect(preview.courses, hasLength(7));
+    expect(
+      preview.courses
+          .singleWhere((course) => course.name == '居住区景观规划设计综合实训')
+          .sessions
+          .any((session) => session.pattern == WeekPattern.oddWeeks),
+      isTrue,
     );
   });
 }
