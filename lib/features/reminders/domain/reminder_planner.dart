@@ -1,3 +1,4 @@
+import '../../../core/time/shanghai_time.dart';
 import '../../timetable/domain/models.dart';
 import 'reminder_models.dart';
 
@@ -27,6 +28,7 @@ class ReminderPlanner {
     ReminderSound sound = ReminderSound.systemDefault,
   }) {
     final reminders = <CourseReminder>[];
+    final shanghaiNow = ShanghaiTime.fromUtc(now.toUtc());
     for (final course in courses) {
       for (final session in course.sessions) {
         final startTime = cdcasSectionStarts[session.startSection];
@@ -43,7 +45,7 @@ class ReminderPlanner {
                   DateTime.monday,
             ),
           );
-          final classStart = DateTime(
+          final classStart = ShanghaiTime.dateTime(
             date.year,
             date.month,
             date.day,
@@ -51,7 +53,7 @@ class ReminderPlanner {
             classStartMinute % 60,
           );
           final scheduledAt = classStart.subtract(leadTime);
-          if (!scheduledAt.isAfter(now)) continue;
+          if (!scheduledAt.isAfter(shanghaiNow)) continue;
           final details = <String>[
             '第${session.startSection}-${session.endSection}节',
             if (session.room.trim().isNotEmpty) session.room.trim(),
@@ -78,7 +80,17 @@ class ReminderPlanner {
   }
 
   int _notificationId(String courseId, CourseSession session, int week) {
-    final value = '$courseId|${session.weekday}|${session.startSection}|$week';
+    final value = [
+      courseId,
+      session.weekday,
+      session.startSection,
+      session.endSection,
+      session.room.trim(),
+      session.startWeek,
+      session.endWeek,
+      session.pattern.name,
+      week,
+    ].join('|');
     var hash = 0x811C9DC5;
     for (final unit in value.codeUnits) {
       hash ^= unit;
