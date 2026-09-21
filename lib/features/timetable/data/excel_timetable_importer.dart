@@ -69,8 +69,8 @@ class ExcelTimetableImporter {
       return parseRows(selectedRows);
     } on ExcelImportException {
       rethrow;
-    } catch (error) {
-      throw ExcelImportException('无法读取该 Excel 文件：$error');
+    } catch (error, stackTrace) {
+      throw ExcelImportException('无法读取该 Excel 文件：$error\n$stackTrace');
     }
   }
 
