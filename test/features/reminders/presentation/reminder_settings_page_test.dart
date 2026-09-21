@@ -56,13 +56,16 @@ void main() {
   testWidgets('persists enabled state after permission is granted', (
     tester,
   ) async {
-    scheduler.requestResult = ReminderPermissionState.grantedExact;
+    scheduler.notificationRequestResult = const ReminderPermissionStatus(
+      notificationsAllowed: true,
+      exactAlarmsAllowed: true,
+    );
     await pumpPage(tester);
 
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
 
-    expect(scheduler.requestCalls, 1);
+    expect(scheduler.notificationRequestCalls, 1);
     expect(await repository.watchRemindersEnabled().first, isTrue);
     expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
   });
@@ -70,7 +73,10 @@ void main() {
   testWidgets('shows delayed warning when only inexact alarms are available', (
     tester,
   ) async {
-    scheduler.requestResult = ReminderPermissionState.grantedInexact;
+    scheduler.notificationRequestResult = const ReminderPermissionStatus(
+      notificationsAllowed: true,
+      exactAlarmsAllowed: false,
+    );
     await pumpPage(tester);
 
     await tester.tap(find.byType(Switch));
@@ -83,7 +89,10 @@ void main() {
   testWidgets('keeps reminders disabled when notifications are denied', (
     tester,
   ) async {
-    scheduler.requestResult = ReminderPermissionState.denied;
+    scheduler.notificationRequestResult = const ReminderPermissionStatus(
+      notificationsAllowed: false,
+      exactAlarmsAllowed: false,
+    );
     await pumpPage(tester);
 
     await tester.tap(find.byType(Switch));
@@ -103,6 +112,48 @@ void main() {
 
     expect(find.text('提醒设置失败，请稍后重试'), findsOneWidget);
     expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNotNull);
+  });
+
+  testWidgets('shows separate permission rows and effective schedule mode', (
+    tester,
+  ) async {
+    scheduler.state = const ReminderPermissionStatus(
+      notificationsAllowed: true,
+      exactAlarmsAllowed: false,
+    );
+
+    await pumpPage(tester);
+
+    expect(find.text('通知权限'), findsOneWidget);
+    expect(find.text('已开启'), findsOneWidget);
+    expect(find.text('精确闹钟权限'), findsOneWidget);
+    expect(find.text('未开启'), findsOneWidget);
+    expect(find.text('当前调度模式'), findsOneWidget);
+    expect(find.text('非精确（可能延迟）'), findsOneWidget);
+  });
+
+  testWidgets('opens matching Android permission actions', (tester) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.byKey(const Key('request_notification_permission')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('open_notification_settings')));
+    await tester.pumpAndSettle();
+
+    scheduler.state = const ReminderPermissionStatus(
+      notificationsAllowed: true,
+      exactAlarmsAllowed: false,
+    );
+    await tester.binding.handleAppLifecycleStateChanged(
+      AppLifecycleState.resumed,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('request_exact_alarm_permission')));
+    await tester.pumpAndSettle();
+
+    expect(scheduler.notificationRequestCalls, 1);
+    expect(scheduler.openNotificationSettingsCalls, 1);
+    expect(scheduler.exactAlarmRequestCalls, 1);
   });
 }
 
@@ -140,22 +191,48 @@ class FakeReminderSettingsRepository implements ReminderSettingsRepository {
 }
 
 class FakeReminderScheduler implements ReminderScheduler {
-  ReminderPermissionState state = ReminderPermissionState.denied;
-  ReminderPermissionState requestResult = ReminderPermissionState.denied;
-  int requestCalls = 0;
+  ReminderPermissionStatus state = const ReminderPermissionStatus(
+    notificationsAllowed: false,
+    exactAlarmsAllowed: false,
+  );
+  ReminderPermissionStatus notificationRequestResult =
+      const ReminderPermissionStatus(
+        notificationsAllowed: false,
+        exactAlarmsAllowed: false,
+      );
+  ReminderPermissionStatus exactAlarmRequestResult =
+      const ReminderPermissionStatus(
+        notificationsAllowed: true,
+        exactAlarmsAllowed: true,
+      );
+  int notificationRequestCalls = 0;
+  int exactAlarmRequestCalls = 0;
+  int openNotificationSettingsCalls = 0;
   bool throwOnRequest = false;
 
   @override
-  Future<ReminderPermissionState> permissionState() async => state;
+  Future<ReminderPermissionStatus> permissionStatus() async => state;
 
   @override
   Future<void> replaceAll(List<CourseReminder> reminders) async {}
 
   @override
-  Future<ReminderPermissionState> requestPermissions() async {
-    requestCalls++;
+  Future<void> openNotificationSettings() async {
+    openNotificationSettingsCalls++;
+  }
+
+  @override
+  Future<ReminderPermissionStatus> requestExactAlarmPermission() async {
+    exactAlarmRequestCalls++;
+    state = exactAlarmRequestResult;
+    return state;
+  }
+
+  @override
+  Future<ReminderPermissionStatus> requestNotificationPermission() async {
+    notificationRequestCalls++;
     if (throwOnRequest) throw StateError('scheduler failed');
-    state = requestResult;
-    return requestResult;
+    state = notificationRequestResult;
+    return state;
   }
 }
