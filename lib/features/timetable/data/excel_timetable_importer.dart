@@ -49,7 +49,7 @@ class ExcelTimetableImporter {
 
   ImportPreview parseBytes(Uint8List bytes) {
     try {
-      final workbook = Excel.decodeBytes(_normalizeWorksheetTargets(bytes));
+      final workbook = Excel.decodeBytes(_normalizeWorkbook(bytes));
       List<List<Object?>>? selectedRows;
       var selectedScore = 0;
       for (final sheet in workbook.tables.values) {
@@ -72,24 +72,46 @@ class ExcelTimetableImporter {
       return parseRows(selectedRows);
     } on ExcelImportException {
       rethrow;
-    } catch (error, stackTrace) {
-      throw ExcelImportException('无法读取该 Excel 文件：$error\n$stackTrace');
+    } catch (_) {
+      throw const ExcelImportException('无法读取该 Excel 文件，请确认文件为 .xlsx 格式。');
     }
   }
 
-  Uint8List _normalizeWorksheetTargets(Uint8List bytes) {
+  Uint8List _normalizeWorkbook(Uint8List bytes) {
     final archive = ZipDecoder().decodeBytes(bytes);
+    var changed = false;
     const relationshipsPath = 'xl/_rels/workbook.xml.rels';
     final relationships = archive.findFile(relationshipsPath);
-    if (relationships == null) return bytes;
-    final xml = utf8.decode(relationships.content as List<int>);
-    final normalized = xml.replaceAllMapped(
-      RegExp(r'Target="/xl/(worksheets/[^"]+)"'),
-      (match) => 'Target="${match.group(1)}"',
-    );
-    if (normalized == xml) return bytes;
-    final content = utf8.encode(normalized);
-    archive.addFile(ArchiveFile(relationshipsPath, content.length, content));
+    if (relationships != null) {
+      final xml = utf8.decode(relationships.content as List<int>);
+      final normalized = xml.replaceAllMapped(
+        RegExp(r'Target="/xl/(worksheets/[^"]+)"'),
+        (match) => 'Target="${match.group(1)}"',
+      );
+      if (normalized != xml) {
+        changed = true;
+        final content = utf8.encode(normalized);
+        archive.addFile(ArchiveFile(relationshipsPath, content.length, content));
+      }
+    }
+    final worksheets = archive.files
+        .where(
+          (file) =>
+              file.name.startsWith('xl/worksheets/') &&
+              file.name.endsWith('.xml'),
+        )
+        .toList(growable: false);
+    for (final worksheet in worksheets) {
+      final xml = utf8.decode(worksheet.content as List<int>);
+      final normalized = xml
+          .replaceAll(RegExp(r'<c\b[^>]*/>'), '')
+          .replaceAll(RegExp(r'<c\b[^>]*>\s*</c>'), '');
+      if (normalized == xml) continue;
+      changed = true;
+      final content = utf8.encode(normalized);
+      archive.addFile(ArchiveFile(worksheet.name, content.length, content));
+    }
+    if (!changed) return bytes;
     return Uint8List.fromList(ZipEncoder().encode(archive)!);
   }
 
