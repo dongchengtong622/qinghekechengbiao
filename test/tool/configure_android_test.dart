@@ -40,7 +40,23 @@ flutter {
       'qinghe_soft.wav',
       'qinghe_alert.wav',
     ]) {
-      File('${sounds.path}/$name').writeAsBytesSync([1, 2, 3]);
+      File('${sounds.path}/$name').writeAsBytesSync([
+        0x52,
+        0x49,
+        0x46,
+        0x46,
+        0,
+        0,
+        0,
+        0,
+        0x57,
+        0x41,
+        0x56,
+        0x45,
+        1,
+        2,
+        3,
+      ]);
     }
 
     configurator.configureAndroid(temporary, sourceDirectory: source);
@@ -69,7 +85,43 @@ flutter {
       'qinghe_soft.wav',
       'qinghe_alert.wav',
     ]) {
-      expect(File('${main.path}/res/raw/$name').readAsBytesSync(), [1, 2, 3]);
+      expect(
+        File('${main.path}/res/raw/$name').readAsBytesSync(),
+        startsWith([0x52, 0x49, 0x46, 0x46]),
+      );
     }
+  });
+
+  test('rejects notification sounds that are not RIFF WAVE files', () {
+    final temporary = Directory.systemTemp.createTempSync('qinghe-sound-');
+    addTearDown(() => temporary.deleteSync(recursive: true));
+    final app = Directory('${temporary.path}/app')..createSync(recursive: true);
+    final main = Directory('${app.path}/src/main')
+      ..createSync(recursive: true);
+    File('${app.path}/build.gradle.kts').writeAsStringSync('''
+android { compileOptions {} defaultConfig {} }
+flutter {}
+''');
+    File('${main.path}/AndroidManifest.xml').writeAsStringSync('''
+<manifest><application android:label="qinghe_timetable"></application></manifest>
+''');
+    final source = Directory('${temporary.path}/source');
+    final sounds = Directory('${source.path}/assets/notification_sounds')
+      ..createSync(recursive: true);
+    for (final name in [
+      'qinghe_chime.wav',
+      'qinghe_soft.wav',
+      'qinghe_alert.wav',
+    ]) {
+      File('${sounds.path}/$name').writeAsBytesSync([1, 2, 3]);
+    }
+
+    expect(
+      () => configurator.configureAndroid(
+        temporary,
+        sourceDirectory: source,
+      ),
+      throwsA(isA<FormatException>()),
+    );
   });
 }
