@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:typed_data';
+
+import 'package:archive/archive.dart';
 
 import 'package:excel/excel.dart';
 
@@ -46,7 +49,7 @@ class ExcelTimetableImporter {
 
   ImportPreview parseBytes(Uint8List bytes) {
     try {
-      final workbook = Excel.decodeBytes(bytes);
+      final workbook = Excel.decodeBytes(_normalizeWorksheetTargets(bytes));
       List<List<Object?>>? selectedRows;
       var selectedScore = 0;
       for (final sheet in workbook.tables.values) {
@@ -69,9 +72,25 @@ class ExcelTimetableImporter {
       return parseRows(selectedRows);
     } on ExcelImportException {
       rethrow;
-    } catch (error, stackTrace) {
-      throw ExcelImportException('无法读取该 Excel 文件：$error\n$stackTrace');
+    } catch (_) {
+      throw const ExcelImportException('无法读取该 Excel 文件，请确认文件为 .xlsx 格式。');
     }
+  }
+
+  Uint8List _normalizeWorksheetTargets(Uint8List bytes) {
+    final archive = ZipDecoder().decodeBytes(bytes);
+    const relationshipsPath = 'xl/_rels/workbook.xml.rels';
+    final relationships = archive.findFile(relationshipsPath);
+    if (relationships == null) return bytes;
+    final xml = utf8.decode(relationships.content as List<int>);
+    final normalized = xml.replaceAllMapped(
+      RegExp(r'Target="/xl/(worksheets/[^"]+)"'),
+      (match) => 'Target="${match.group(1)}"',
+    );
+    if (normalized == xml) return bytes;
+    final content = utf8.encode(normalized);
+    archive.addFile(ArchiveFile(relationshipsPath, content.length, content));
+    return Uint8List.fromList(ZipEncoder().encode(archive)!);
   }
 
   ImportPreview parseRows(List<List<Object?>> rows) {
