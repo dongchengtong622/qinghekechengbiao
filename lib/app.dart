@@ -175,21 +175,25 @@ class _QingheAppState extends State<QingheApp> with WidgetsBindingObserver {
                 return StreamBuilder<bool>(
                   stream: repository.watchRemindersEnabled(),
                   initialData: false,
-                  builder: (context, reminderSnapshot) => TimetablePage(
-                    semester: semester,
-                    courses: courseSnapshot.data!,
-                    displayWeek: semester.weekFor(DateTime.now()) ?? 1,
-                    remindersEnabled: reminderSnapshot.data ?? false,
-                    onAdd: () => _openEditor(context, semester.id),
-                    onImport: () => unawaited(_openImport(context)),
-                    onReminders: () => unawaited(_openReminders(context)),
-                    onEdit: (course) =>
-                        _openEditor(context, semester.id, course),
-                    onDelete: (course) => unawaited(() async {
-                      await repository.deleteCourse(course.id);
-                      await _rescheduleReminders();
-                    }()),
-                  ),
+                  builder: (context, reminderSnapshot) {
+                    final currentWeek = semester.weekFor(ShanghaiTime.now());
+                    return TimetablePage(
+                      semester: semester,
+                      courses: courseSnapshot.data!,
+                      initialDisplayWeek: currentWeek ?? 1,
+                      currentWeek: currentWeek,
+                      remindersEnabled: reminderSnapshot.data ?? false,
+                      onAdd: () => _openEditor(context, semester.id),
+                      onImport: () => unawaited(_openImport(context)),
+                      onReminders: () => unawaited(_openReminders(context)),
+                      onEdit: (course) =>
+                          _openEditor(context, semester.id, course),
+                      onDelete: (course) => unawaited(() async {
+                        await repository.deleteCourse(course.id);
+                        await _rescheduleReminders();
+                      }()),
+                    );
+                  },
                 );
               },
             );
