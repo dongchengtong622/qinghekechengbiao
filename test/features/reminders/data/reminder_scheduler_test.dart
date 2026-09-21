@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qinghe_timetable/core/time/shanghai_time.dart';
 import 'package:qinghe_timetable/features/reminders/data/reminder_scheduler.dart';
 import 'package:qinghe_timetable/features/reminders/domain/reminder_models.dart';
+import 'package:timezone/timezone.dart' as timezone;
 
 void main() {
   late FakeNotificationGateway gateway;
@@ -101,6 +103,16 @@ void main() {
       expect(gateway.requestCalls, 1);
     },
   );
+
+  test('normalizes scheduled instants to the Shanghai location', () {
+    final result = FlutterLocalNotificationGateway.toShanghaiSchedule(
+      DateTime.utc(2026, 9, 20, 23, 55),
+    );
+
+    expect(result, isA<timezone.TZDateTime>());
+    expect(result.location, ShanghaiTime.location);
+    expect(result.toIso8601String(), '2026-09-21T07:55:00.000+0800');
+  });
 }
 
 class FakeNotificationGateway implements NotificationGateway {
