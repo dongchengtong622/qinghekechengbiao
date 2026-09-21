@@ -20,7 +20,13 @@ void main() {
     expect(workflow, contains('qinghe-timetable-0.4.0-universal.apk'));
     expect(workflow, contains('qinghe-timetable-0.4.0-arm64.apk'));
     expect(workflow, contains('qinghe-timetable-0.4.0.aab'));
-    expect(readme, contains('flutter create . --platforms=android,ios,windows'));
+    expect(
+      readme,
+      contains(
+        'flutter create --platforms=android --org com.qinghe '
+        '--project-name qinghe_timetable .platform_template',
+      ),
+    );
     expect(readme, contains('dart run tool/configure_android.dart'));
     expect(readme, contains('dart run build_runner build'));
   });
