@@ -61,8 +61,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
           .watchReminderPreferences()
           .first;
       final permission = await widget.scheduler.permissionStatus();
-      final enabled =
-          preferences.enabled && permission.notificationsAllowed;
+      final enabled = preferences.enabled && permission.notificationsAllowed;
       if (reschedule && enabled) await widget.onChanged(true);
       if (!mounted) return;
       setState(() {
@@ -125,8 +124,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
         return;
       }
 
-      final permission = await widget.scheduler
-          .requestNotificationPermission();
+      final permission = await widget.scheduler.requestNotificationPermission();
       final accepted = permission.notificationsAllowed;
       await widget.repository.setRemindersEnabled(accepted);
       if (accepted) await widget.onChanged(true);
@@ -154,8 +152,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
     if (_loading) return;
     setState(() => _loading = true);
     try {
-      final permission = await widget.scheduler
-          .requestNotificationPermission();
+      final permission = await widget.scheduler.requestNotificationPermission();
       if (!mounted) return;
       setState(() => _permission = permission);
     } finally {
