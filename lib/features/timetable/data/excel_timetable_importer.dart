@@ -91,7 +91,9 @@ class ExcelTimetableImporter {
       if (normalized != xml) {
         changed = true;
         final content = utf8.encode(normalized);
-        archive.addFile(ArchiveFile(relationshipsPath, content.length, content));
+        archive.addFile(
+          ArchiveFile(relationshipsPath, content.length, content),
+        );
       }
     }
     final worksheets = archive.files
