@@ -30,10 +30,12 @@ void main() {
   testWidgets('allows changing lead time and reminder sound', (tester) async {
     await pumpPage(tester);
 
+    await tester.ensureVisible(find.byKey(const Key('lead_time')));
     await tester.tap(find.byKey(const Key('lead_time')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('提前 10 分钟').last);
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('reminder_sound')));
     await tester.tap(find.byKey(const Key('reminder_sound')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('柔和铃声').last);
@@ -82,6 +84,10 @@ void main() {
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('提醒可能因系统限制而延迟'),
+      200,
+    );
     expect(find.text('提醒可能因系统限制而延迟'), findsOneWidget);
     expect(await repository.watchRemindersEnabled().first, isTrue);
   });
