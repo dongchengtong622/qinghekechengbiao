@@ -64,9 +64,7 @@ class ExcelTimetableImporter {
         }
       }
       if (selectedRows == null) {
-        throw const ExcelImportException(
-          'Excel 中没有找到同时包含课程和星期表头的课表工作表。',
-        );
+        throw const ExcelImportException('Excel 中没有找到同时包含课程和星期表头的课表工作表。');
       }
       return parseRows(selectedRows);
     } on ExcelImportException {
@@ -99,8 +97,7 @@ class ExcelTimetableImporter {
     final missing = <String>[
       if (!headers.containsKey('课程名称')) '课程名称',
       if (!headers.containsKey('星期')) '星期',
-      if (!(headers.containsKey('开始节次') &&
-              headers.containsKey('结束节次')) &&
+      if (!(headers.containsKey('开始节次') && headers.containsKey('结束节次')) &&
           !headers.containsKey('节次'))
         '开始节次/结束节次或上课节次',
       if (!(headers.containsKey('开始周') && headers.containsKey('结束周')) &&
@@ -234,10 +231,8 @@ class ExcelTimetableImporter {
     return headers;
   }
 
-  String _normalizeHeader(String value) => value
-      .trim()
-      .replaceAll(RegExp(r'[\s:：()（）]'), '')
-      .toLowerCase();
+  String _normalizeHeader(String value) =>
+      value.trim().replaceAll(RegExp(r'[\s:：()（）]'), '').toLowerCase();
 
   (int, int)? _sections(List<Object?> row, Map<String, int> headers) {
     final start = _integer(_fieldValue(row, headers, '开始节次'));
@@ -246,11 +241,7 @@ class ExcelTimetableImporter {
       if (start == null || end == null || start < 1 || end < start) return null;
       return (start, end);
     }
-    final value = _field(
-      row,
-      headers,
-      '节次',
-    ).replaceAll(RegExp(r'[第节\s]'), '');
+    final value = _field(row, headers, '节次').replaceAll(RegExp(r'[第节\s]'), '');
     final match = RegExp(r'^(\d+)(?:[-–—~至](\d+))?$').firstMatch(value);
     if (match == null) return null;
     final parsedStart = int.parse(match.group(1)!);
@@ -260,10 +251,7 @@ class ExcelTimetableImporter {
         : null;
   }
 
-  List<(int, int)>? _weeks(
-    List<Object?> row,
-    Map<String, int> headers,
-  ) {
+  List<(int, int)>? _weeks(List<Object?> row, Map<String, int> headers) {
     final start = _integer(_fieldValue(row, headers, '开始周'));
     final end = _integer(_fieldValue(row, headers, '结束周'));
     if (start != null || end != null) {
