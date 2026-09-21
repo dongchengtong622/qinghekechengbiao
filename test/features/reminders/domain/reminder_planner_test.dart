@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qinghe_timetable/core/time/shanghai_time.dart';
 import 'package:qinghe_timetable/features/reminders/domain/reminder_models.dart';
 import 'package:qinghe_timetable/features/reminders/domain/reminder_planner.dart';
 import 'package:qinghe_timetable/features/timetable/domain/models.dart';
+import 'package:timezone/timezone.dart' as timezone;
 
 void main() {
   const planner = ReminderPlanner();
@@ -172,5 +174,54 @@ void main() {
     expect(first.map((item) => item.id), second.map((item) => item.id));
     expect(first.every((item) => item.id > 0), isTrue);
     expect(first.map((item) => item.id).toSet(), hasLength(first.length));
+  });
+
+  test('plans reminders as Shanghai times from a Tokyo current time', () {
+    ShanghaiTime.ensureInitialized();
+    final tokyo = timezone.getLocation('Asia/Tokyo');
+    final reminders = planner.plan(
+      semester: semester,
+      courses: [course(endWeek: 1)],
+      now: timezone.TZDateTime(tokyo, 2026, 9, 1),
+    );
+
+    final scheduledAt = reminders.single.scheduledAt;
+    expect(scheduledAt, isA<timezone.TZDateTime>());
+    expect((scheduledAt as timezone.TZDateTime).location.name, 'Asia/Shanghai');
+    expect(scheduledAt.toIso8601String(), '2026-09-07T07:55:00.000+0800');
+  });
+
+  test('notification IDs include the complete session identity', () {
+    final base = course(endWeek: 1);
+    final firstSession = base.sessions.single;
+    final multiSessionCourse = Course(
+      id: base.id,
+      semesterId: base.semesterId,
+      source: base.source,
+      name: base.name,
+      teacher: base.teacher,
+      colorValue: base.colorValue,
+      sessions: [
+        firstSession,
+        CourseSession(
+          weekday: firstSession.weekday,
+          startSection: firstSession.startSection,
+          endSection: firstSession.endSection + 1,
+          startWeek: 1,
+          endWeek: 1,
+          pattern: WeekPattern.everyWeek,
+          room: 'A305',
+        ),
+      ],
+    );
+
+    final reminders = planner.plan(
+      semester: semester,
+      courses: [multiSessionCourse],
+      now: DateTime(2026, 9, 1),
+    );
+
+    expect(reminders, hasLength(2));
+    expect(reminders.map((item) => item.id).toSet(), hasLength(2));
   });
 }
