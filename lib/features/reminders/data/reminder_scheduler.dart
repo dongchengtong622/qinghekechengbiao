@@ -10,7 +10,7 @@ abstract interface class ReminderScheduler {
   Future<ReminderSyncReport> replaceAll(List<CourseReminder> reminders);
 
   Future<void> sendTest({
-    required ReminderSound sound,
+    required RingtoneSelection sound,
     required Duration delay,
   });
 
@@ -242,7 +242,7 @@ class AndroidReminderScheduler implements ReminderScheduler {
 
   @override
   Future<void> sendTest({
-    required ReminderSound sound,
+    required RingtoneSelection sound,
     required Duration delay,
   }) async {
     await _ensureInitialized();
@@ -302,17 +302,12 @@ class FlutterLocalNotificationGateway implements NotificationGateway {
   }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   static const channelId = 'qinghe_course_reminders';
-  static String channelIdFor(ReminderSound sound) =>
-      '${channelId}_${sound.name}';
+  static String channelIdFor(RingtoneSelection sound) =>
+      '${channelId}_${sound.id}';
 
-  static String? resourceNameFor(ReminderSound sound) => switch (sound) {
-    ReminderSound.systemDefault => null,
-    ReminderSound.chime => 'qinghe_chime',
-    ReminderSound.soft => 'qinghe_soft',
-    ReminderSound.alert => 'qinghe_alert',
-  };
+  static String? resourceNameFor(RingtoneSelection sound) => sound.resourceName;
 
-  NotificationDetails _notificationDetails(ReminderSound sound) {
+  NotificationDetails _notificationDetails(RingtoneSelection sound) {
     final resourceName = resourceNameFor(sound);
     return NotificationDetails(
       android: AndroidNotificationDetails(
@@ -322,7 +317,9 @@ class FlutterLocalNotificationGateway implements NotificationGateway {
         importance: Importance.max,
         priority: Priority.max,
         playSound: true,
-        sound: resourceName == null
+        sound: sound.contentUri != null
+            ? UriAndroidNotificationSound(sound.contentUri!)
+            : resourceName == null
             ? null
             : RawResourceAndroidNotificationSound(resourceName),
         enableVibration: true,
