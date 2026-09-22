@@ -44,26 +44,26 @@ jobs:
         run: |
           mkdir -p build/release-artifacts
           flutter build apk --release
-          cp build/app/outputs/flutter-apk/app-release.apk build/release-artifacts/qinghe-timetable-0.4.0-universal.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/release-artifacts/qinghe-timetable-0.5.0-universal.apk
           flutter build apk --release --target-platform android-arm64
-          cp build/app/outputs/flutter-apk/app-release.apk build/release-artifacts/qinghe-timetable-0.4.0-arm64.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/release-artifacts/qinghe-timetable-0.5.0-arm64.apk
           flutter build appbundle --release
-          cp build/app/outputs/bundle/release/app-release.aab build/release-artifacts/qinghe-timetable-0.4.0.aab
+          cp build/app/outputs/bundle/release/app-release.aab build/release-artifacts/qinghe-timetable-0.5.0.aab
 
       - name: Upload universal APK
         uses: actions/upload-artifact@v4
         with:
-          name: qinghe-timetable-0.4.0-universal-apk
-          path: build/release-artifacts/qinghe-timetable-0.4.0-universal.apk
+          name: qinghe-timetable-0.5.0-universal-apk
+          path: build/release-artifacts/qinghe-timetable-0.5.0-universal.apk
 
       - name: Upload arm64 APK
         uses: actions/upload-artifact@v4
         with:
-          name: qinghe-timetable-0.4.0-arm64-apk
-          path: build/release-artifacts/qinghe-timetable-0.4.0-arm64.apk
+          name: qinghe-timetable-0.5.0-arm64-apk
+          path: build/release-artifacts/qinghe-timetable-0.5.0-arm64.apk
 
       - name: Upload Android App Bundle
         uses: actions/upload-artifact@v4
         with:
-          name: qinghe-timetable-0.4.0-aab
-          path: build/release-artifacts/qinghe-timetable-0.4.0.aab
+          name: qinghe-timetable-0.5.0-aab
+          path: build/release-artifacts/qinghe-timetable-0.5.0.aab
