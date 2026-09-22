@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/reminder_scheduler.dart';
+import '../data/ringtone_service.dart';
 import '../domain/reminder_diagnostics.dart';
 import '../domain/reminder_models.dart';
 import '../domain/reminder_settings_repository.dart';
@@ -16,11 +17,13 @@ class ReminderSettingsPage extends StatefulWidget {
     required this.repository,
     required this.scheduler,
     required this.onChanged,
+    this.ringtoneService = const NativeRingtoneService(),
   });
 
   final ReminderSettingsRepository repository;
   final ReminderScheduler scheduler;
   final ReminderSettingChanged onChanged;
+  final RingtoneService ringtoneService;
 
   @override
   State<ReminderSettingsPage> createState() => _ReminderSettingsPageState();
@@ -31,7 +34,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
   bool _loading = true;
   bool _enabled = false;
   int _leadMinutes = 30;
-  ReminderSound _sound = ReminderSound.systemDefault;
+  RingtoneSelection _sound = RingtoneSelection.systemDefault;
   ReminderFailure? _failure;
   ReminderPermissionStatus _permission = const ReminderPermissionStatus(
     notificationsAllowed: false,
@@ -48,7 +51,63 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(widget.ringtoneService.stop());
     super.dispose();
+  }
+
+  Future<void> _importLocalSound() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final sound = await widget.ringtoneService.importLocal();
+      if (sound == null) return;
+      await widget.repository.setReminderSound(sound);
+      if (_enabled) await widget.onChanged(true);
+      if (mounted) setState(() => _sound = sound);
+    } on PlatformException catch (error) {
+      _showFailure(
+        ReminderFailure(
+          stage: ReminderStage.settings,
+          code: error.code,
+          message: '添加本地音乐失败',
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _previewSound() async {
+    try {
+      await widget.ringtoneService.preview(_sound);
+    } on PlatformException catch (error) {
+      _showFailure(
+        ReminderFailure(
+          stage: ReminderStage.registration,
+          code: error.code,
+          message: '无法试听该铃声',
+        ),
+      );
+    }
+  }
+
+  Future<void> _sendTest(Duration delay) async {
+    try {
+      await widget.scheduler.sendTest(sound: _sound, delay: delay);
+      if (!mounted) return;
+      final message = delay == Duration.zero ? '测试通知已发送' : '测试已安排，1分钟后请锁屏检查';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } on PlatformException catch (error) {
+      _showFailure(
+        ReminderFailure(
+          stage: ReminderStage.registration,
+          code: error.code,
+          message: '测试通知失败',
+        ),
+      );
+    }
   }
 
   @override
@@ -172,7 +231,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
     }
   }
 
-  Future<void> _setSound(ReminderSound? sound) async {
+  Future<void> _setSound(RingtoneSelection? sound) async {
     if (sound == null || _loading) return;
     setState(() => _loading = true);
     try {
@@ -184,12 +243,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
     }
   }
 
-  String _soundLabel(ReminderSound sound) => switch (sound) {
-    ReminderSound.systemDefault => '系统默认',
-    ReminderSound.chime => '清脆铃声',
-    ReminderSound.soft => '柔和铃声',
-    ReminderSound.alert => '提示音',
-  };
+  String _soundLabel(RingtoneSelection sound) => sound.name;
 
   Future<void> _setEnabled(bool enabled) async {
     if (_loading) return;
@@ -282,6 +336,41 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
               value: _enabled,
               onChanged: _loading ? null : _setEnabled,
             ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                key: const Key('import_local_ringtone'),
+                onPressed: _loading ? null : _importLocalSound,
+                icon: const Icon(Icons.library_music_outlined),
+                label: const Text('添加本地音乐'),
+              ),
+              OutlinedButton.icon(
+                key: const Key('preview_ringtone'),
+                onPressed: _previewSound,
+                icon: const Icon(Icons.play_arrow),
+                label: const Text('试听'),
+              ),
+              OutlinedButton.icon(
+                key: const Key('stop_ringtone'),
+                onPressed: widget.ringtoneService.stop,
+                icon: const Icon(Icons.stop),
+                label: const Text('停止'),
+              ),
+              FilledButton(
+                key: const Key('test_notification_now'),
+                onPressed: () => _sendTest(Duration.zero),
+                child: const Text('立即测试通知'),
+              ),
+              FilledButton.tonal(
+                key: const Key('test_notification_delayed'),
+                onPressed: () => _sendTest(const Duration(minutes: 1)),
+                child: const Text('1分钟后测试'),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           if (_failure case final failure?) ...[
@@ -394,14 +483,17 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
           Card(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: DropdownButtonFormField<ReminderSound>(
+              child: DropdownButtonFormField<RingtoneSelection>(
                 key: const Key('reminder_sound'),
                 initialValue: _sound,
                 decoration: const InputDecoration(
                   labelText: '提醒铃声',
                   border: InputBorder.none,
                 ),
-                items: ReminderSound.values
+                items: [
+                  ...RingtoneSelection.presets,
+                  if (_sound.contentUri != null) _sound,
+                ]
                     .map(
                       (sound) => DropdownMenuItem(
                         value: sound,
