@@ -14,13 +14,16 @@ void main() {
     scheduler = FakeReminderScheduler();
   });
 
-  Future<void> pumpPage(WidgetTester tester) async {
+  Future<void> pumpPage(
+    WidgetTester tester, {
+    ReminderSettingChanged? onChanged,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReminderSettingsPage(
           repository: repository,
           scheduler: scheduler,
-          onChanged: (_) async {},
+          onChanged: onChanged ?? (_) async {},
         ),
       ),
     );
@@ -177,6 +180,27 @@ void main() {
 
       expect(repository.enabled, isFalse);
       expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+    },
+  );
+
+  testWidgets(
+    'shows a scheduling failure without hiding the loaded permission state',
+    (tester) async {
+      scheduler.state = const ReminderPermissionStatus(
+        notificationsAllowed: true,
+        exactAlarmsAllowed: true,
+      );
+      await pumpPage(
+        tester,
+        onChanged: (_) async => throw StateError('registration failed'),
+      );
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+
+      expect(find.text('通知权限'), findsOneWidget);
+      expect(find.text('设置提醒失败'), findsOneWidget);
+      expect(find.text('无法读取提醒状态，请稍后重试'), findsNothing);
     },
   );
 }
