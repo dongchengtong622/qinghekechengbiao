@@ -108,9 +108,7 @@ class AndroidReminderScheduler implements ReminderScheduler {
         try {
           await gateway.cancel(id);
         } catch (error) {
-          failures.add(
-            _failure(ReminderStage.registration, error, '关闭课程提醒失败'),
-          );
+          failures.add(_failure(ReminderStage.registration, error, '关闭课程提醒失败'));
         }
       }
       return _report(reminders, failures: failures);
@@ -133,10 +131,7 @@ class AndroidReminderScheduler implements ReminderScheduler {
     final failures = <ReminderFailure>[];
     for (final reminder in reminders) {
       try {
-        await gateway.schedule(
-          reminder,
-          exact: permission.exactAlarmsAllowed,
-        );
+        await gateway.schedule(reminder, exact: permission.exactAlarmsAllowed);
       } on PlatformException catch (error) {
         if (permission.exactAlarmsAllowed && _isExactAlarmError(error.code)) {
           try {
@@ -150,22 +145,14 @@ class AndroidReminderScheduler implements ReminderScheduler {
             );
           } catch (fallbackError) {
             failures.add(
-              _failure(
-                ReminderStage.registration,
-                fallbackError,
-                '设置提醒失败',
-              ),
+              _failure(ReminderStage.registration, fallbackError, '设置提醒失败'),
             );
           }
         } else {
-          failures.add(
-            _failure(ReminderStage.registration, error, '设置提醒失败'),
-          );
+          failures.add(_failure(ReminderStage.registration, error, '设置提醒失败'));
         }
       } catch (error) {
-        failures.add(
-          _failure(ReminderStage.registration, error, '设置提醒失败'),
-        );
+        failures.add(_failure(ReminderStage.registration, error, '设置提醒失败'));
       }
     }
 
@@ -173,9 +160,7 @@ class AndroidReminderScheduler implements ReminderScheduler {
     try {
       confirmed = await gateway.pendingIds();
     } catch (error) {
-      failures.add(
-        _failure(ReminderStage.verification, error, '无法核对系统提醒'),
-      );
+      failures.add(_failure(ReminderStage.verification, error, '无法核对系统提醒'));
       return _report(reminders, failures: failures);
     }
 
@@ -191,18 +176,12 @@ class AndroidReminderScheduler implements ReminderScheduler {
         try {
           await gateway.cancel(stale);
         } catch (error) {
-          failures.add(
-            _failure(ReminderStage.registration, error, '清理过期提醒失败'),
-          );
+          failures.add(_failure(ReminderStage.registration, error, '清理过期提醒失败'));
         }
       }
     }
 
-    return _report(
-      reminders,
-      registeredIds: registered,
-      failures: failures,
-    );
+    return _report(reminders, registeredIds: registered, failures: failures);
   }
 
   ReminderFailure? _validate(List<CourseReminder> reminders) {
@@ -253,11 +232,7 @@ class AndroidReminderScheduler implements ReminderScheduler {
     return normalized.contains('exact') && normalized.contains('alarm');
   }
 
-  ReminderFailure _failure(
-    ReminderStage stage,
-    Object error,
-    String message,
-  ) {
+  ReminderFailure _failure(ReminderStage stage, Object error, String message) {
     return ReminderFailure(
       stage: stage,
       code: error is PlatformException ? error.code : 'unexpected',
@@ -280,9 +255,7 @@ class AndroidReminderScheduler implements ReminderScheduler {
     }
     final immediate = delay <= Duration.zero;
     final reminder = CourseReminder(
-      id: immediate
-          ? immediateTestNotificationId
-          : delayedTestNotificationId,
+      id: immediate ? immediateTestNotificationId : delayedTestNotificationId,
       scheduledAt: ShanghaiTime.now().add(delay),
       title: '青禾课表测试提醒',
       body: immediate ? '立即测试通知' : '1分钟测试通知',
@@ -294,10 +267,7 @@ class AndroidReminderScheduler implements ReminderScheduler {
       return;
     }
     try {
-      await gateway.schedule(
-        reminder,
-        exact: permission.exactAlarmsAllowed,
-      );
+      await gateway.schedule(reminder, exact: permission.exactAlarmsAllowed);
     } on PlatformException catch (error) {
       if (!permission.exactAlarmsAllowed || !_isExactAlarmError(error.code)) {
         rethrow;
