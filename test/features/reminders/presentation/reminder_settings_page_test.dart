@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qinghe_timetable/features/reminders/data/reminder_scheduler.dart';
+import 'package:qinghe_timetable/features/reminders/domain/reminder_diagnostics.dart';
 import 'package:qinghe_timetable/features/reminders/domain/reminder_models.dart';
 import 'package:qinghe_timetable/features/reminders/domain/reminder_settings_repository.dart';
 import 'package:qinghe_timetable/features/reminders/presentation/reminder_settings_page.dart';
@@ -262,7 +263,20 @@ class FakeReminderScheduler implements ReminderScheduler {
   Future<ReminderPermissionStatus> permissionStatus() async => state;
 
   @override
-  Future<void> replaceAll(List<CourseReminder> reminders) async {}
+  Future<ReminderSyncReport> replaceAll(List<CourseReminder> reminders) async {
+    return ReminderSyncReport(
+      requested: reminders.length,
+      registeredIds: reminders.map((item) => item.id).toSet(),
+      nextAt: reminders.isEmpty ? null : reminders.first.scheduledAt,
+      failures: const [],
+    );
+  }
+
+  @override
+  Future<void> sendTest({
+    required ReminderSound sound,
+    required Duration delay,
+  }) async {}
 
   @override
   Future<void> openNotificationSettings() async {
