@@ -215,6 +215,7 @@ class FakeNotificationGateway implements NotificationGateway {
   @override
   Future<void> cancelAll() async => calls.add('cancelAll');
 
+  @override
   Future<void> cancel(int id) async {
     calls.add('cancel:' + id.toString());
     pending.remove(id);
@@ -223,10 +224,11 @@ class FakeNotificationGateway implements NotificationGateway {
   @override
   Future<void> initialize() async {}
 
+  @override
   Future<Set<int>> pendingIds() async {
     calls.add('pending');
     if (failPendingAfterSchedule && scheduleCalls > 0) {
-      throw const PlatformException(code: 'pending_failed');
+      throw PlatformException(code: 'pending_failed');
     }
     return Set.of(pending);
   }
@@ -266,14 +268,15 @@ class FakeNotificationGateway implements NotificationGateway {
     }
     if (rejectExactOnce && exact) {
       rejectExactOnce = false;
-      throw const PlatformException(code: 'exact_alarm_denied');
+      throw PlatformException(code: 'exact_alarm_denied');
     }
     if (failedIds.contains(reminder.id)) {
-      throw const PlatformException(code: 'schedule_failed');
+      throw PlatformException(code: 'schedule_failed');
     }
     pending.add(reminder.id);
   }
 
+  @override
   Future<void> showTest(CourseReminder reminder) async {
     calls.add('show:' + reminder.id.toString());
     pending.add(reminder.id);
