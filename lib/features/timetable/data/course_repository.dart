@@ -137,8 +137,8 @@ class CourseRepository implements ReminderSettingsRepository {
   }
 
   @override
-  Future<void> setReminderSound(ReminderSound sound) {
-    return _setMetadata('reminder_sound', sound.name);
+  Future<void> setReminderSound(RingtoneSelection sound) {
+    return _setMetadata('reminder_sound', sound.storageValue);
   }
 
   Future<void> _setMetadata(String key, String value) {
