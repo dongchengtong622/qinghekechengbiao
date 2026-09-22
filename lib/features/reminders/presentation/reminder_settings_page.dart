@@ -62,7 +62,10 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
           .first;
       final permission = await widget.scheduler.permissionStatus();
       final enabled = preferences.enabled && permission.notificationsAllowed;
-      if (reschedule && enabled) await widget.onChanged(true);
+      if (preferences.enabled && !permission.notificationsAllowed) {
+        await widget.repository.setRemindersEnabled(false);
+      }
+      if (reschedule) await widget.onChanged(enabled);
       if (!mounted) return;
       setState(() {
         _enabled = enabled;
