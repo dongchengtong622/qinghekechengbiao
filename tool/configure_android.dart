@@ -108,9 +108,7 @@ void _installRingtoneBridge(Directory source, Directory androidDirectory) {
 }
 
 void _writeResourceKeepFile(Directory androidDirectory) {
-  final file = File(
-    '${androidDirectory.path}/app/src/main/res/raw/keep.xml',
-  );
+  final file = File('${androidDirectory.path}/app/src/main/res/raw/keep.xml');
   file.writeAsStringSync(
     '<resources xmlns:tools="http://schemas.android.com/tools" '
     'tools:keep="@raw/qinghe_*,@mipmap/ic_launcher" />',
