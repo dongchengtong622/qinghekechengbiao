@@ -12,16 +12,16 @@ void main() {
     ).readAsStringSync();
     final readme = File('README.md').readAsStringSync();
 
-    expect(pubspec, contains('version: 0.4.0+4'));
+    expect(pubspec, contains('version: 0.5.0+5'));
     expect(workflow, contains('flutter build apk --release'));
     expect(
       workflow,
       contains('flutter build apk --release --target-platform android-arm64'),
     );
     expect(workflow, contains('flutter build appbundle --release'));
-    expect(workflow, contains('qinghe-timetable-0.4.0-universal.apk'));
-    expect(workflow, contains('qinghe-timetable-0.4.0-arm64.apk'));
-    expect(workflow, contains('qinghe-timetable-0.4.0.aab'));
+    expect(workflow, contains('qinghe-timetable-0.5.0-universal.apk'));
+    expect(workflow, contains('qinghe-timetable-0.5.0-arm64.apk'));
+    expect(workflow, contains('qinghe-timetable-0.5.0.aab'));
     expect(
       readme,
       contains(
@@ -108,10 +108,29 @@ flutter {
     expect(firstManifest, contains('android.permission.SCHEDULE_EXACT_ALARM'));
     expect(firstManifest, contains('android:label="青禾课表"'));
     expect(firstManifest, contains('ScheduledNotificationBootReceiver'));
+    expect(firstManifest, contains('RingtoneProvider'));
+    expect(
+      File(
+        '${main.path}/kotlin/com/qinghe/qinghe_timetable/MainActivity.kt',
+      ).existsSync(),
+      isTrue,
+    );
+    expect(File('${main.path}/res/raw/keep.xml').existsSync(), isTrue);
     for (final name in [
       'qinghe_chime.wav',
       'qinghe_soft.wav',
       'qinghe_alert.wav',
+    ]) {
+      expect(
+        File('${main.path}/res/raw/$name').readAsBytesSync().take(4),
+        orderedEquals([0x52, 0x49, 0x46, 0x46]),
+      );
+    }
+    for (final name in [
+      'qinghe_morning.wav',
+      'qinghe_xylophone.wav',
+      'qinghe_water.wav',
+      'qinghe_bell.wav',
     ]) {
       expect(
         File('${main.path}/res/raw/$name').readAsBytesSync().take(4),
