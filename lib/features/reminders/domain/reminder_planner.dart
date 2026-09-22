@@ -96,6 +96,6 @@ class ReminderPlanner {
       hash ^= unit;
       hash = (hash * 0x01000193) & 0x7FFFFFFF;
     }
-    return hash == 0 ? 1 : hash;
+    return (hash % maxCourseNotificationId) + 1;
   }
 }
