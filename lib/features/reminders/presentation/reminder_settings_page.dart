@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../data/reminder_scheduler.dart';
+import '../domain/reminder_diagnostics.dart';
 import '../domain/reminder_models.dart';
 import '../domain/reminder_settings_repository.dart';
 
@@ -30,6 +32,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
   bool _enabled = false;
   int _leadMinutes = 30;
   ReminderSound _sound = ReminderSound.systemDefault;
+  ReminderFailure? _failure;
   ReminderPermissionStatus _permission = const ReminderPermissionStatus(
     notificationsAllowed: false,
     exactAlarmsAllowed: false,
@@ -56,31 +59,104 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
   }
 
   Future<void> _load({bool reschedule = false}) async {
+    ReminderPreferences preferences;
     try {
-      final preferences = await widget.repository
-          .watchReminderPreferences()
-          .first;
-      final permission = await widget.scheduler.permissionStatus();
+      preferences = await widget.repository.watchReminderPreferences().first;
+    } catch (_) {
+      _showFailure(
+        const ReminderFailure(
+          stage: ReminderStage.settings,
+          code: 'read_failed',
+          message: '无法读取提醒状态，请稍后重试',
+        ),
+      );
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+
+    ReminderPermissionStatus permission;
+    try {
+      permission = await widget.scheduler.permissionStatus();
+    } on PlatformException catch (error) {
+      _showFailure(
+        ReminderFailure(
+          stage: ReminderStage.permissions,
+          code: error.code,
+          message: '无法读取通知权限，请稍后重试',
+        ),
+      );
+      if (mounted) setState(() => _loading = false);
+      return;
+    } catch (_) {
+      _showFailure(
+        const ReminderFailure(
+          stage: ReminderStage.permissions,
+          code: 'unexpected',
+          message: '无法读取通知权限，请稍后重试',
+        ),
+      );
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+
+    try {
       final enabled = preferences.enabled && permission.notificationsAllowed;
       if (preferences.enabled && !permission.notificationsAllowed) {
         await widget.repository.setRemindersEnabled(false);
       }
-      if (reschedule) await widget.onChanged(enabled);
       if (!mounted) return;
       setState(() {
         _enabled = enabled;
         _leadMinutes = preferences.leadMinutes;
         _sound = preferences.sound;
         _permission = permission;
+        _failure = null;
       });
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('无法读取提醒状态，请稍后重试')));
+      if (reschedule) await _reschedule(enabled);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _reschedule(bool enabled) async {
+    try {
+      await widget.onChanged(enabled);
+    } on PlatformException catch (error) {
+      _showFailure(
+        ReminderFailure(
+          stage: ReminderStage.registration,
+          code: error.code,
+          message: '设置提醒失败',
+        ),
+      );
+    } catch (_) {
+      _showFailure(
+        const ReminderFailure(
+          stage: ReminderStage.registration,
+          code: 'unexpected',
+          message: '设置提醒失败',
+        ),
+      );
+    }
+  }
+
+  void _showFailure(ReminderFailure failure) {
+    if (!mounted) return;
+    setState(() => _failure = failure);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(failure.message)));
+  }
+
+  Future<void> _copyFailure() async {
+    final failure = _failure;
+    if (failure == null) return;
+    await Clipboard.setData(
+      ClipboardData(
+        text:
+            'stage=${failure.stage.name}; code=${failure.code}; message=${failure.message}',
+      ),
+    );
   }
 
   Future<void> _setLeadMinutes(int? minutes) async {
@@ -207,6 +283,35 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
             ),
           ),
           const SizedBox(height: 12),
+          if (_failure case final failure?) ...[
+            Card(
+              child: ListTile(
+                title: Text(failure.message),
+                subtitle: Text(
+                  '阶段：${failure.stage.name} · 错误码：${failure.code}',
+                ),
+                trailing: Wrap(
+                  children: [
+                    IconButton(
+                      key: const Key('retry_reminders'),
+                      tooltip: '重试',
+                      onPressed: _loading
+                          ? null
+                          : () => _load(reschedule: true),
+                      icon: const Icon(Icons.refresh),
+                    ),
+                    IconButton(
+                      key: const Key('copy_reminder_error'),
+                      tooltip: '复制错误详情',
+                      onPressed: _copyFailure,
+                      icon: const Icon(Icons.copy_outlined),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Card(
             child: Column(
               children: [
