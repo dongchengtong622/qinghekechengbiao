@@ -127,9 +127,12 @@ void main() {
   test('sends immediate and delayed tests through native paths', () async {
     gateway.allowNotifications();
 
-    await scheduler.sendTest(sound: ReminderSound.chime, delay: Duration.zero);
     await scheduler.sendTest(
-      sound: ReminderSound.soft,
+      sound: RingtoneSelection.chime,
+      delay: Duration.zero,
+    );
+    await scheduler.sendTest(
+      sound: RingtoneSelection.soft,
       delay: const Duration(minutes: 1),
     );
 
@@ -169,13 +172,13 @@ void main() {
 
   test('uses distinct sound channels and Shanghai schedule times', () {
     expect(
-      ReminderSound.values
+      RingtoneSelection.presets
           .map(FlutterLocalNotificationGateway.channelIdFor)
           .toSet(),
-      hasLength(ReminderSound.values.length),
+      hasLength(RingtoneSelection.presets.length),
     );
     expect(
-      FlutterLocalNotificationGateway.resourceNameFor(ReminderSound.chime),
+      FlutterLocalNotificationGateway.resourceNameFor(RingtoneSelection.chime),
       'qinghe_chime',
     );
     final result = FlutterLocalNotificationGateway.toShanghaiSchedule(
