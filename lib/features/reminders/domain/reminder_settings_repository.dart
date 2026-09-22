@@ -9,5 +9,5 @@ abstract interface class ReminderSettingsRepository {
 
   Future<void> setReminderLeadMinutes(int minutes);
 
-  Future<void> setReminderSound(ReminderSound sound);
+  Future<void> setReminderSound(RingtoneSelection sound);
 }
