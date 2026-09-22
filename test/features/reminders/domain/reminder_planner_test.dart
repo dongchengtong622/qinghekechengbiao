@@ -113,7 +113,7 @@ void main() {
       ],
       now: DateTime(2026, 9, 1),
       leadTime: const Duration(minutes: 10),
-      sound: ReminderSound.soft,
+      sound: RingtoneSelection.soft,
     );
 
     expect(
@@ -121,7 +121,7 @@ void main() {
       ShanghaiTime.dateTime(2026, 9, 7, 9, 30),
     );
     expect(reminders.first.title, '10分钟后上课：高等数学');
-    expect(reminders.first.sound, ReminderSound.soft);
+    expect(reminders.first.sound, RingtoneSelection.soft);
   });
 
   test('maps weekdays and honors week pattern and boundaries', () {
