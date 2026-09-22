@@ -46,7 +46,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.leadMinutes, 10);
-    expect(repository.sound, ReminderSound.soft);
+    expect(repository.sound, RingtoneSelection.soft);
   });
 
   testWidgets('does not request permission before a user enables reminders', (
@@ -209,7 +209,7 @@ void main() {
 class FakeReminderSettingsRepository implements ReminderSettingsRepository {
   bool enabled = false;
   int leadMinutes = 30;
-  ReminderSound sound = ReminderSound.systemDefault;
+  RingtoneSelection sound = RingtoneSelection.systemDefault;
 
   @override
   Future<void> setReminderLeadMinutes(int minutes) async {
@@ -217,7 +217,7 @@ class FakeReminderSettingsRepository implements ReminderSettingsRepository {
   }
 
   @override
-  Future<void> setReminderSound(ReminderSound sound) async {
+  Future<void> setReminderSound(RingtoneSelection sound) async {
     this.sound = sound;
   }
 
@@ -274,7 +274,7 @@ class FakeReminderScheduler implements ReminderScheduler {
 
   @override
   Future<void> sendTest({
-    required ReminderSound sound,
+    required RingtoneSelection sound,
     required Duration delay,
   }) async {}
 
