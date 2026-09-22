@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 void main(List<String> arguments) {
   configureAndroid(Directory(arguments.isEmpty ? 'android' : arguments.first));
@@ -16,6 +17,8 @@ void configureAndroid(
     sourceDirectory ?? Directory.current,
     Directory('${androidDirectory.path}/app/src/main/res/raw'),
   );
+  _installRingtoneBridge(Directory.current, androidDirectory);
+  _writeResourceKeepFile(androidDirectory);
 }
 
 void _copyNotificationSounds(Directory sourceDirectory, Directory target) {
@@ -45,6 +48,73 @@ void _copyNotificationSounds(Directory sourceDirectory, Directory target) {
     }
     file.copySync('${target.path}/$name');
   }
+  final generated = <String, double>{
+    'qinghe_morning.wav': 523.25,
+    'qinghe_xylophone.wav': 659.25,
+    'qinghe_water.wav': 783.99,
+    'qinghe_bell.wav': 880.0,
+  };
+  for (final entry in generated.entries) {
+    _writeTone(File('${target.path}/${entry.key}'), entry.value);
+  }
+}
+
+void _writeTone(File file, double frequency) {
+  const sampleRate = 16000;
+  const samples = 6400;
+  final dataSize = samples * 2;
+  final bytes = BytesBuilder();
+  void write16(int value) => bytes.add([value & 255, (value >> 8) & 255]);
+  void write32(int value) => bytes.add([
+    value & 255,
+    (value >> 8) & 255,
+    (value >> 16) & 255,
+    (value >> 24) & 255,
+  ]);
+  bytes.add('RIFF'.codeUnits);
+  write32(36 + dataSize);
+  bytes.add('WAVEfmt '.codeUnits);
+  write32(16);
+  write16(1);
+  write16(1);
+  write32(sampleRate);
+  write32(sampleRate * 2);
+  write16(2);
+  write16(16);
+  bytes.add('data'.codeUnits);
+  write32(dataSize);
+  for (var index = 0; index < samples; index++) {
+    final phase = 2 * 3.141592653589793 * frequency * index / sampleRate;
+    final envelope = 1 - index / samples;
+    write16((12000 * envelope * _sin(phase)).round());
+  }
+  file.writeAsBytesSync(bytes.takeBytes());
+}
+
+double _sin(double value) {
+  var x = value % (2 * 3.141592653589793);
+  if (x > 3.141592653589793) x -= 2 * 3.141592653589793;
+  final x2 = x * x;
+  return x * (1 - x2 / 6 + x2 * x2 / 120 - x2 * x2 * x2 / 5040);
+}
+
+void _installRingtoneBridge(Directory source, Directory androidDirectory) {
+  final target = Directory(
+    '${androidDirectory.path}/app/src/main/kotlin/com/qinghe/qinghe_timetable',
+  )..createSync(recursive: true);
+  for (final name in ['MainActivity.kt', 'RingtoneProvider.kt']) {
+    File('${source.path}/tool/android/$name').copySync('${target.path}/$name');
+  }
+}
+
+void _writeResourceKeepFile(Directory androidDirectory) {
+  final file = File(
+    '${androidDirectory.path}/app/src/main/res/raw/keep.xml',
+  );
+  file.writeAsStringSync(
+    '<resources xmlns:tools="http://schemas.android.com/tools" '
+    'tools:keep="@raw/qinghe_*,@mipmap/ic_launcher" />',
+  );
 }
 
 void _configureGradle(File file) {
@@ -114,6 +184,19 @@ void _configureManifest(File file) {
     source = source.replaceFirst(
       '    </application>',
       '$receivers    </application>',
+    );
+  }
+  const provider = '''
+        <provider
+            android:name=".RingtoneProvider"
+            android:authorities="com.qinghe.timetable.ringtones"
+            android:exported="true"
+            android:grantUriPermissions="true" />
+''';
+  if (!source.contains('RingtoneProvider')) {
+    source = source.replaceFirst(
+      '    </application>',
+      '$provider    </application>',
     );
   }
   file.writeAsStringSync(source);
