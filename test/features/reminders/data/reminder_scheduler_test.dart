@@ -217,7 +217,7 @@ class FakeNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> cancel(int id) async {
-    calls.add('cancel:' + id.toString());
+    calls.add('cancel:$id');
     pending.remove(id);
   }
 
@@ -257,10 +257,7 @@ class FakeNotificationGateway implements NotificationGateway {
   Future<void> schedule(CourseReminder reminder, {required bool exact}) async {
     scheduleCalls++;
     calls.add(
-      'schedule:' +
-          reminder.id.toString() +
-          ':' +
-          (exact ? 'exact' : 'inexact'),
+      'schedule:${reminder.id}:${exact ? 'exact' : 'inexact'}',
     );
     if (pauseFirstSchedule && !firstScheduleStarted.isCompleted) {
       firstScheduleStarted.complete();
@@ -278,7 +275,7 @@ class FakeNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> showTest(CourseReminder reminder) async {
-    calls.add('show:' + reminder.id.toString());
+    calls.add('show:${reminder.id}');
     pending.add(reminder.id);
   }
 }
