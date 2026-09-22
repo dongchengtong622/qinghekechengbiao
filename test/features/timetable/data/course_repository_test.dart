@@ -109,14 +109,14 @@ void main() {
   test('persists reminder lead time and sound', () async {
     final initial = await repository.watchReminderPreferences().first;
     expect(initial.leadMinutes, 30);
-    expect(initial.sound, ReminderSound.systemDefault);
+    expect(initial.sound, RingtoneSelection.systemDefault);
 
     await repository.setReminderLeadMinutes(10);
-    await repository.setReminderSound(ReminderSound.chime);
+    await repository.setReminderSound(RingtoneSelection.chime);
 
     final saved = await repository.watchReminderPreferences().first;
     expect(saved.leadMinutes, 10);
-    expect(saved.sound, ReminderSound.chime);
+    expect(saved.sound, RingtoneSelection.chime);
   });
 
   test('persists custom start and end times for a course session', () async {
