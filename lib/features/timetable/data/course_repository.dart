@@ -110,10 +110,7 @@ class CourseRepository implements ReminderSettingsRepository {
       return ReminderPreferences(
         enabled: values['reminders_enabled'] == 'true',
         leadMinutes: leadMinutes != null && leadMinutes >= 0 ? leadMinutes : 30,
-        sound: ReminderSound.values.firstWhere(
-          (sound) => sound.name == soundName,
-          orElse: () => ReminderSound.systemDefault,
-        ),
+        sound: RingtoneSelection.fromStorage(soundName),
       );
     });
   }
