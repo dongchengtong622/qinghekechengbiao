@@ -78,25 +78,37 @@ void main() {
     });
   });
 
-  test('rejects duplicate and reserved course IDs before registration', () async {
-    final duplicate = await scheduler.replaceAll([reminder(12), reminder(12)]);
-    final reserved = await scheduler.replaceAll([
-      reminder(delayedTestNotificationId),
-    ]);
+  test(
+    'rejects duplicate and reserved course IDs before registration',
+    () async {
+      final duplicate = await scheduler.replaceAll([
+        reminder(12),
+        reminder(12),
+      ]);
+      final reserved = await scheduler.replaceAll([
+        reminder(delayedTestNotificationId),
+      ]);
 
-    expect(duplicate.failures.single.stage, ReminderStage.planning);
-    expect(reserved.failures.single.stage, ReminderStage.planning);
-    expect(gateway.calls.where((item) => item.startsWith('schedule:')), isEmpty);
-  });
+      expect(duplicate.failures.single.stage, ReminderStage.planning);
+      expect(reserved.failures.single.stage, ReminderStage.planning);
+      expect(
+        gateway.calls.where((item) => item.startsWith('schedule:')),
+        isEmpty,
+      );
+    },
+  );
 
-  test('reports denied notification permission without clearing alarms', () async {
-    gateway.pending.add(11);
+  test(
+    'reports denied notification permission without clearing alarms',
+    () async {
+      gateway.pending.add(11);
 
-    final report = await scheduler.replaceAll([reminder(12)]);
+      final report = await scheduler.replaceAll([reminder(12)]);
 
-    expect(report.failures.single.stage, ReminderStage.permissions);
-    expect(gateway.pending, contains(11));
-  });
+      expect(report.failures.single.stage, ReminderStage.permissions);
+      expect(gateway.pending, contains(11));
+    },
+  );
 
   test('falls back after an explicit exact-alarm platform error', () async {
     gateway.allowNotifications();
@@ -115,10 +127,7 @@ void main() {
   test('sends immediate and delayed tests through native paths', () async {
     gateway.allowNotifications();
 
-    await scheduler.sendTest(
-      sound: ReminderSound.chime,
-      delay: Duration.zero,
-    );
+    await scheduler.sendTest(sound: ReminderSound.chime, delay: Duration.zero);
     await scheduler.sendTest(
       sound: ReminderSound.soft,
       delay: const Duration(minutes: 1),
