@@ -156,6 +156,29 @@ void main() {
     expect(scheduler.openNotificationSettingsCalls, 1);
     expect(scheduler.exactAlarmRequestCalls, 1);
   });
+
+  testWidgets(
+    'persists disabled state after notification permission is revoked',
+    (tester) async {
+      repository.enabled = true;
+      scheduler.state = const ReminderPermissionStatus(
+        notificationsAllowed: true,
+        exactAlarmsAllowed: true,
+      );
+      await pumpPage(tester);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+
+      scheduler.state = const ReminderPermissionStatus(
+        notificationsAllowed: false,
+        exactAlarmsAllowed: false,
+      );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+
+      expect(repository.enabled, isFalse);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+    },
+  );
 }
 
 class FakeReminderSettingsRepository implements ReminderSettingsRepository {
