@@ -25,7 +25,7 @@ class ReminderPlanner {
     required List<Course> courses,
     required DateTime now,
     Duration leadTime = const Duration(minutes: 30),
-    ReminderSound sound = ReminderSound.systemDefault,
+    RingtoneSelection sound = RingtoneSelection.systemDefault,
   }) {
     final reminders = <CourseReminder>[];
     final shanghaiNow = ShanghaiTime.fromUtc(now.toUtc());
