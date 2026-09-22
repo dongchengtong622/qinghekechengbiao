@@ -85,7 +85,7 @@ class RingtoneSelection {
       final parts = value.split('|');
       if (parts.length == 3) {
         return RingtoneSelection(
-          id: 'local-' + parts[2].hashCode.toUnsigned(32).toRadixString(16),
+          id: 'local-${parts[2].hashCode.toUnsigned(32).toRadixString(16)}',
           name: Uri.decodeComponent(parts[1]),
           contentUri: Uri.decodeComponent(parts[2]),
         );
