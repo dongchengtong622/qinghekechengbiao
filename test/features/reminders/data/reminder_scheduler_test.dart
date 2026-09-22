@@ -256,9 +256,7 @@ class FakeNotificationGateway implements NotificationGateway {
   @override
   Future<void> schedule(CourseReminder reminder, {required bool exact}) async {
     scheduleCalls++;
-    calls.add(
-      'schedule:${reminder.id}:${exact ? 'exact' : 'inexact'}',
-    );
+    calls.add('schedule:${reminder.id}:${exact ? 'exact' : 'inexact'}');
     if (pauseFirstSchedule && !firstScheduleStarted.isCompleted) {
       firstScheduleStarted.complete();
       await releaseFirstSchedule.future;
