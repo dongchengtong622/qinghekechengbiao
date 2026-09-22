@@ -143,6 +143,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
   void _showFailure(ReminderFailure failure) {
     if (!mounted) return;
     setState(() => _failure = failure);
+    if (failure.stage == ReminderStage.registration) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(failure.message)));
