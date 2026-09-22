@@ -1,3 +1,7 @@
+const maxCourseNotificationId = 0x7ffffffd;
+const delayedTestNotificationId = 0x7ffffffe;
+const immediateTestNotificationId = 0x7fffffff;
+
 class ReminderPermissionStatus {
   const ReminderPermissionStatus({
     required this.notificationsAllowed,
