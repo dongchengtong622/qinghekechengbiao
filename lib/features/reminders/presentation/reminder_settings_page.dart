@@ -96,9 +96,9 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
       await widget.scheduler.sendTest(sound: _sound, delay: delay);
       if (!mounted) return;
       final message = delay == Duration.zero ? '测试通知已发送' : '测试已安排，1分钟后请锁屏检查';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } on PlatformException catch (error) {
       _showFailure(
         ReminderFailure(
@@ -490,17 +490,18 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage>
                   labelText: '提醒铃声',
                   border: InputBorder.none,
                 ),
-                items: [
-                  ...RingtoneSelection.presets,
-                  if (_sound.contentUri != null) _sound,
-                ]
-                    .map(
-                      (sound) => DropdownMenuItem(
-                        value: sound,
-                        child: Text(_soundLabel(sound)),
-                      ),
-                    )
-                    .toList(growable: false),
+                items:
+                    [
+                          ...RingtoneSelection.presets,
+                          if (_sound.contentUri != null) _sound,
+                        ]
+                        .map(
+                          (sound) => DropdownMenuItem(
+                            value: sound,
+                            child: Text(_soundLabel(sound)),
+                          ),
+                        )
+                        .toList(growable: false),
                 onChanged: _loading ? null : _setSound,
               ),
             ),
