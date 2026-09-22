@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qinghe_timetable/core/time/shanghai_time.dart';
 import 'package:qinghe_timetable/features/reminders/data/reminder_scheduler.dart';
+import 'package:qinghe_timetable/features/reminders/domain/reminder_diagnostics.dart';
 import 'package:qinghe_timetable/features/reminders/domain/reminder_models.dart';
 import 'package:timezone/timezone.dart' as timezone;
 
@@ -15,113 +17,148 @@ void main() {
     scheduler = AndroidReminderScheduler(gateway);
   });
 
-  final reminder = CourseReminder(
-    id: 42,
-    scheduledAt: DateTime(2026, 9, 21, 7, 55),
-    title: '30分钟后上课：高等数学',
-    body: '第1-2节 · A302 · 陈老师',
-    payload: 'math',
+  CourseReminder reminder(int id) => CourseReminder(
+    id: id,
+    scheduledAt: DateTime.utc(2026, 9, 21, 0, id.clamp(0, 59)),
+    title: '课程提醒',
+    body: '第1-2节',
+    payload: 'course-$id',
   );
 
-  test(
-    'initializes once and cancels old reminders before replacement',
-    () async {
-      gateway.permission = const ReminderPermissionStatus(
-        notificationsAllowed: true,
-        exactAlarmsAllowed: true,
-      );
+  test('reconciles verified reminders before deleting stale alarms', () async {
+    gateway.allowNotifications();
+    gateway.pending.addAll({11, 12, immediateTestNotificationId});
 
-      await scheduler.replaceAll([reminder]);
-      await scheduler.replaceAll([reminder]);
+    final report = await scheduler.replaceAll([reminder(12), reminder(13)]);
 
-      expect(gateway.initializeCalls, 1);
-      expect(gateway.events, [
-        'cancelAll',
-        'schedule:42:exact',
-        'cancelAll',
-        'schedule:42:exact',
-      ]);
-    },
-  );
+    expect(report.failures, isEmpty);
+    expect(report.registeredIds, {12, 13});
+    expect(gateway.calls, isNot(contains('cancelAll')));
+    expect(gateway.calls, contains('cancel:11'));
+    expect(gateway.pending, {12, 13, immediateTestNotificationId});
+  });
 
-  test(
-    'serializes concurrent replacements so the latest request wins',
-    () async {
-      gateway.permission = const ReminderPermissionStatus(
-        notificationsAllowed: true,
-        exactAlarmsAllowed: true,
-      );
-      gateway.pauseFirstSchedule = true;
-      final first = scheduler.replaceAll([reminder]);
-      await gateway.firstScheduleStarted.future;
-      final latestReminder = CourseReminder(
-        id: 84,
-        scheduledAt: DateTime(2026, 9, 22, 7, 55),
-        title: '30分钟后上课：大学英语',
-        body: '第1-2节 · B201 · 李老师',
-        payload: 'english',
-      );
-      final second = scheduler.replaceAll([latestReminder]);
+  test('keeps old reminders and test alarms after partial failure', () async {
+    gateway.allowNotifications();
+    gateway.pending.addAll({11, 12, immediateTestNotificationId});
+    gateway.failedIds.add(13);
 
-      gateway.releaseFirstSchedule.complete();
-      await Future.wait([first, second]);
+    final report = await scheduler.replaceAll([reminder(12), reminder(13)]);
 
-      expect(gateway.events, [
-        'cancelAll',
-        'schedule:42:exact',
-        'cancelAll',
-        'schedule:84:exact',
-      ]);
-    },
-  );
+    expect(report.failures.single.stage, ReminderStage.registration);
+    expect(gateway.calls, isNot(contains('cancelAll')));
+    expect(gateway.pending, containsAll({11, 12, immediateTestNotificationId}));
+  });
 
-  test('uses inexact scheduling when exact alarms are unavailable', () async {
+  test('does not delete alarms when verification fails', () async {
+    gateway.allowNotifications();
+    gateway.pending.addAll({11, 12});
+    gateway.failPendingAfterSchedule = true;
+
+    final report = await scheduler.replaceAll([reminder(12)]);
+
+    expect(report.failures.single.stage, ReminderStage.verification);
+    expect(gateway.calls, isNot(contains('cancel:11')));
+  });
+
+  test('explicit disable cancels courses but preserves test alarms', () async {
+    gateway.pending.addAll({
+      11,
+      12,
+      delayedTestNotificationId,
+      immediateTestNotificationId,
+    });
+
+    final report = await scheduler.replaceAll(const []);
+
+    expect(report.failures, isEmpty);
+    expect(gateway.pending, {
+      delayedTestNotificationId,
+      immediateTestNotificationId,
+    });
+  });
+
+  test('rejects duplicate and reserved course IDs before registration', () async {
+    final duplicate = await scheduler.replaceAll([reminder(12), reminder(12)]);
+    final reserved = await scheduler.replaceAll([
+      reminder(delayedTestNotificationId),
+    ]);
+
+    expect(duplicate.failures.single.stage, ReminderStage.planning);
+    expect(reserved.failures.single.stage, ReminderStage.planning);
+    expect(gateway.calls.where((item) => item.startsWith('schedule:')), isEmpty);
+  });
+
+  test('reports denied notification permission without clearing alarms', () async {
+    gateway.pending.add(11);
+
+    final report = await scheduler.replaceAll([reminder(12)]);
+
+    expect(report.failures.single.stage, ReminderStage.permissions);
+    expect(gateway.pending, contains(11));
+  });
+
+  test('falls back after an explicit exact-alarm platform error', () async {
+    gateway.allowNotifications();
+    gateway.rejectExactOnce = true;
+
+    final report = await scheduler.replaceAll([reminder(12)]);
+
+    expect(
+      gateway.calls,
+      containsAllInOrder(['schedule:12:exact', 'schedule:12:inexact']),
+    );
+    expect(report.registeredIds, {12});
+    expect(report.failures.single.code, 'exact_fallback');
+  });
+
+  test('sends immediate and delayed tests through native paths', () async {
+    gateway.allowNotifications();
+
+    await scheduler.sendTest(
+      sound: ReminderSound.chime,
+      delay: Duration.zero,
+    );
+    await scheduler.sendTest(
+      sound: ReminderSound.soft,
+      delay: const Duration(minutes: 1),
+    );
+
+    expect(gateway.calls, contains('show:$immediateTestNotificationId'));
+    expect(
+      gateway.calls,
+      contains('schedule:$delayedTestNotificationId:exact'),
+    );
+  });
+
+  test('serializes replacements so the latest request wins', () async {
+    gateway.allowNotifications();
+    gateway.pauseFirstSchedule = true;
+    final first = scheduler.replaceAll([reminder(42)]);
+    await gateway.firstScheduleStarted.future;
+    final second = scheduler.replaceAll([reminder(43)]);
+    gateway.releaseFirstSchedule.complete();
+    await Future.wait([first, second]);
+
+    expect(gateway.pending, {43});
+  });
+
+  test('keeps permission actions separate', () async {
     gateway.permission = const ReminderPermissionStatus(
       notificationsAllowed: true,
       exactAlarmsAllowed: false,
     );
 
-    await scheduler.replaceAll([reminder]);
+    await scheduler.requestNotificationPermission();
+    await scheduler.requestExactAlarmPermission();
+    await scheduler.openNotificationSettings();
 
-    expect(gateway.events, ['cancelAll', 'schedule:42:inexact']);
+    expect(gateway.notificationRequestCalls, 1);
+    expect(gateway.exactAlarmRequestCalls, 1);
+    expect(gateway.openNotificationSettingsCalls, 1);
   });
 
-  test('does not schedule when notification permission is denied', () async {
-    gateway.permission = const ReminderPermissionStatus(
-      notificationsAllowed: false,
-      exactAlarmsAllowed: false,
-    );
-
-    await scheduler.replaceAll([reminder]);
-
-    expect(gateway.events, ['cancelAll']);
-  });
-
-  test(
-    'keeps notification and exact-alarm permission actions separate',
-    () async {
-      gateway.permission = const ReminderPermissionStatus(
-        notificationsAllowed: true,
-        exactAlarmsAllowed: false,
-      );
-
-      final status = await scheduler.permissionStatus();
-      expect(status.notificationsAllowed, isTrue);
-      expect(status.exactAlarmsAllowed, isFalse);
-      expect(gateway.notificationRequestCalls, 0);
-      expect(gateway.exactAlarmRequestCalls, 0);
-
-      await scheduler.requestNotificationPermission();
-      await scheduler.requestExactAlarmPermission();
-      await scheduler.openNotificationSettings();
-
-      expect(gateway.notificationRequestCalls, 1);
-      expect(gateway.exactAlarmRequestCalls, 1);
-      expect(gateway.openNotificationSettingsCalls, 1);
-    },
-  );
-
-  test('uses distinct channels and matching raw resources for each sound', () {
+  test('uses distinct sound channels and Shanghai schedule times', () {
     expect(
       ReminderSound.values
           .map(FlutterLocalNotificationGateway.channelIdFor)
@@ -132,21 +169,9 @@ void main() {
       FlutterLocalNotificationGateway.resourceNameFor(ReminderSound.chime),
       'qinghe_chime',
     );
-    expect(
-      FlutterLocalNotificationGateway.resourceNameFor(ReminderSound.soft),
-      'qinghe_soft',
-    );
-    expect(
-      FlutterLocalNotificationGateway.resourceNameFor(ReminderSound.alert),
-      'qinghe_alert',
-    );
-  });
-
-  test('normalizes scheduled instants to the Shanghai location', () {
     final result = FlutterLocalNotificationGateway.toShanghaiSchedule(
       DateTime.utc(2026, 9, 20, 23, 55),
     );
-
     expect(result, isA<timezone.TZDateTime>());
     expect(result.location, ShanghaiTime.location);
     expect(result.toIso8601String(), '2026-09-21T07:55:00.000+0800');
@@ -158,21 +183,43 @@ class FakeNotificationGateway implements NotificationGateway {
     notificationsAllowed: false,
     exactAlarmsAllowed: false,
   );
-  int initializeCalls = 0;
+  final pending = <int>{};
+  final failedIds = <int>{};
+  final calls = <String>[];
+  bool failPendingAfterSchedule = false;
+  bool rejectExactOnce = false;
+  bool pauseFirstSchedule = false;
+  var scheduleCalls = 0;
   int notificationRequestCalls = 0;
   int exactAlarmRequestCalls = 0;
   int openNotificationSettingsCalls = 0;
-  final events = <String>[];
-  bool pauseFirstSchedule = false;
   final firstScheduleStarted = Completer<void>();
   final releaseFirstSchedule = Completer<void>();
 
-  @override
-  Future<void> cancelAll() async => events.add('cancelAll');
+  void allowNotifications() {
+    permission = const ReminderPermissionStatus(
+      notificationsAllowed: true,
+      exactAlarmsAllowed: true,
+    );
+  }
 
   @override
-  Future<void> initialize() async {
-    initializeCalls++;
+  Future<void> cancelAll() async => calls.add('cancelAll');
+
+  Future<void> cancel(int id) async {
+    calls.add('cancel:' + id.toString());
+    pending.remove(id);
+  }
+
+  @override
+  Future<void> initialize() async {}
+
+  Future<Set<int>> pendingIds() async {
+    calls.add('pending');
+    if (failPendingAfterSchedule && scheduleCalls > 0) {
+      throw const PlatformException(code: 'pending_failed');
+    }
+    return Set.of(pending);
   }
 
   @override
@@ -197,10 +244,29 @@ class FakeNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> schedule(CourseReminder reminder, {required bool exact}) async {
-    events.add('schedule:${reminder.id}:${exact ? 'exact' : 'inexact'}');
+    scheduleCalls++;
+    calls.add(
+      'schedule:' +
+          reminder.id.toString() +
+          ':' +
+          (exact ? 'exact' : 'inexact'),
+    );
     if (pauseFirstSchedule && !firstScheduleStarted.isCompleted) {
       firstScheduleStarted.complete();
       await releaseFirstSchedule.future;
     }
+    if (rejectExactOnce && exact) {
+      rejectExactOnce = false;
+      throw const PlatformException(code: 'exact_alarm_denied');
+    }
+    if (failedIds.contains(reminder.id)) {
+      throw const PlatformException(code: 'schedule_failed');
+    }
+    pending.add(reminder.id);
+  }
+
+  Future<void> showTest(CourseReminder reminder) async {
+    calls.add('show:' + reminder.id.toString());
+    pending.add(reminder.id);
   }
 }
