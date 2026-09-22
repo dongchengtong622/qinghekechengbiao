@@ -181,7 +181,11 @@ void main() {
     );
 
     expect(first.map((item) => item.id), second.map((item) => item.id));
-    expect(first.every((item) => item.id > 0), isTrue);\n    expect(\n      first.every((item) => item.id <= maxCourseNotificationId),\n      isTrue,\n    );
+    expect(first.every((item) => item.id > 0), isTrue);
+    expect(
+      first.every((item) => item.id <= maxCourseNotificationId),
+      isTrue,
+    );
     expect(first.map((item) => item.id).toSet(), hasLength(first.length));
   });
 
