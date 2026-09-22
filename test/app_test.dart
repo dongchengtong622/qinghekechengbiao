@@ -47,7 +47,7 @@ class _FakeScheduler implements ReminderScheduler {
 
   @override
   Future<void> sendTest({
-    required ReminderSound sound,
+    required RingtoneSelection sound,
     required Duration delay,
   }) async {}
 
