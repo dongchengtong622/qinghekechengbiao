@@ -303,7 +303,7 @@ class FlutterLocalNotificationGateway implements NotificationGateway {
 
   static const channelId = 'qinghe_course_reminders';
   static String channelIdFor(ReminderSound sound) =>
-      channelId + '_' + sound.name;
+      '${channelId}_${sound.name}';
 
   static String? resourceNameFor(ReminderSound sound) => switch (sound) {
     ReminderSound.systemDefault => null,
