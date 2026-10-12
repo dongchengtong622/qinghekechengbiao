@@ -1,0 +1,62 @@
+[
+  {
+    "file": "01_45min_lecture.xlsx",
+    "name": "高等数学",
+    "teacher": "张明",
+    "day": 1,
+    "first": 1,
+    "last": 2,
+    "start": 480,
+    "end": 580,
+    "lesson": 45,
+    "gap": 10
+  },
+  {
+    "file": "02_40min_seminar.xlsx",
+    "name": "法学研讨",
+    "teacher": "李青",
+    "day": 2,
+    "first": 5,
+    "last": 6,
+    "start": 840,
+    "end": 940,
+    "lesson": 40,
+    "gap": 20
+  },
+  {
+    "file": "03_50min_evening.xlsx",
+    "name": "设计工作坊",
+    "teacher": "王芳",
+    "day": 3,
+    "first": 9,
+    "last": 10,
+    "start": 1110,
+    "end": 1220,
+    "lesson": 50,
+    "gap": 10
+  },
+  {
+    "file": "04_three_period_lab.xlsx",
+    "name": "大学物理实验",
+    "teacher": "陈林",
+    "day": 4,
+    "first": 1,
+    "last": 3,
+    "start": 480,
+    "end": 625,
+    "lesson": 45,
+    "gap": 5
+  },
+  {
+    "file": "05_unequal_break_review.xlsx",
+    "name": "医学综合实验",
+    "teacher": "赵宁",
+    "day": 5,
+    "first": 1,
+    "last": 3,
+    "start": 480,
+    "end": 624,
+    "lesson": 45,
+    "gap": null
+  }
+]

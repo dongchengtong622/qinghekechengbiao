@@ -4,14 +4,76 @@ import 'package:qinghe_timetable/features/timetable/domain/models.dart';
 import 'package:qinghe_timetable/features/timetable/presentation/course_editor_page.dart';
 
 void main() {
+  testWidgets('editing periods 5 to 6 displays and selects their actual time', (
+    tester,
+  ) async {
+    const existing = Course(
+      id: 'afternoon',
+      semesterId: 'active-semester',
+      source: CourseSource.cdcasKingo,
+      name: '人工智能数学基础',
+      teacher: '',
+      colorValue: 0xFF2E7D66,
+      sessions: [
+        CourseSession(
+          weekday: 5,
+          startSection: 5,
+          endSection: 6,
+          startWeek: 1,
+          endWeek: 18,
+          pattern: WeekPattern.everyWeek,
+          room: '',
+          startMinute: 820,
+          endMinute: 915,
+          timeSource: CourseTimeSource.schedule,
+        ),
+      ],
+    );
+    final initialTimes = <TimeOfDay>[];
+    Course? saved;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CourseEditorPage(
+          semesterId: 'active-semester',
+          initialCourse: existing,
+          timePicker: (_, initial) async {
+            initialTimes.add(initial);
+            return null;
+          },
+          onSave: (course) async {
+            saved = course;
+          },
+        ),
+      ),
+    );
+    expect(find.text('13:40'), findsOneWidget);
+    expect(find.text('15:15'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('start_time')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('end_time')));
+    await tester.pumpAndSettle();
+    expect(initialTimes, [
+      const TimeOfDay(hour: 13, minute: 40),
+      const TimeOfDay(hour: 15, minute: 15),
+    ]);
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    expect(saved!.sessions.single.timeSource, CourseTimeSource.schedule);
+  });
   Future<void> pumpEditor(
     WidgetTester tester, {
     Course? initialCourse,
+    CourseTimePicker? timePicker,
     required Future<void> Function(Course) onSave,
   }) {
     return tester.pumpWidget(
       MaterialApp(
-        home: CourseEditorPage(initialCourse: initialCourse, onSave: onSave),
+        home: CourseEditorPage(
+          semesterId: 'active-semester',
+          initialCourse: initialCourse,
+          timePicker: timePicker,
+          onSave: onSave,
+        ),
       ),
     );
   }
@@ -52,11 +114,39 @@ void main() {
     expect(saved?.name, '高等数学');
     expect(saved?.teacher, '陈老师');
     expect(saved?.sessions.single.room, 'A302');
+    expect(saved?.semesterId, 'active-semester');
+  });
+
+  testWidgets('allows selecting custom start and end times', (tester) async {
+    Course? saved;
+    final selections = <TimeOfDay>[
+      const TimeOfDay(hour: 9, minute: 40),
+      const TimeOfDay(hour: 11, minute: 15),
+    ];
+    await pumpEditor(
+      tester,
+      timePicker: (_, _) async => selections.removeAt(0),
+      onSave: (course) async => saved = course,
+    );
+    await tester.enterText(find.byKey(const Key('course_name')), '高等数学');
+
+    await tester.tap(find.byKey(const Key('start_time')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('end_time')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    expect(saved?.sessions.single.startMinute, 580);
+    expect(saved?.sessions.single.endMinute, 675);
   });
 
   testWidgets('prefills an existing course for editing', (tester) async {
     const existing = Course(
       id: 'math',
+      semesterId: 'sample-2026-autumn',
+      source: CourseSource.manual,
       name: '高等数学',
       teacher: '陈老师',
       colorValue: 0xFF2E7D66,
@@ -78,5 +168,53 @@ void main() {
     expect(find.widgetWithText(TextFormField, '高等数学'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, '陈老师'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, 'A302'), findsOneWidget);
+  });
+
+  testWidgets('editing the first session preserves remaining sessions', (
+    tester,
+  ) async {
+    const existing = Course(
+      id: 'math',
+      semesterId: 'active-semester',
+      source: CourseSource.cdcasKingo,
+      externalId: 'K1001',
+      name: '高等数学',
+      teacher: '陈老师',
+      colorValue: 0xFF2E7D66,
+      sessions: [
+        CourseSession(
+          weekday: DateTime.monday,
+          startSection: 1,
+          endSection: 2,
+          startWeek: 1,
+          endWeek: 18,
+          pattern: WeekPattern.everyWeek,
+          room: 'A302',
+        ),
+        CourseSession(
+          weekday: DateTime.wednesday,
+          startSection: 3,
+          endSection: 4,
+          startWeek: 1,
+          endWeek: 18,
+          pattern: WeekPattern.everyWeek,
+          room: 'B201',
+        ),
+      ],
+    );
+    Course? saved;
+    await pumpEditor(
+      tester,
+      initialCourse: existing,
+      onSave: (course) async => saved = course,
+    );
+    await tester.enterText(find.byKey(const Key('room')), 'A305');
+
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    expect(saved?.sessions, hasLength(2));
+    expect(saved?.sessions.first.room, 'A305');
+    expect(saved?.sessions.last.room, 'B201');
   });
 }

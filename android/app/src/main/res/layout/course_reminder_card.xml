@@ -1,0 +1,10 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/course_reminder_card">
+    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView android:id="@+id/reminder_card_name" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="17sp" android:textStyle="bold" android:textColor="#FFFFFF" android:maxLines="2" />
+        <TextView android:id="@+id/reminder_card_summary" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="13sp" android:textColor="#DAE8DF" android:maxLines="2" />
+    </LinearLayout>
+    <TextView android:id="@+id/reminder_card_snooze" android:layout_width="56dp" android:layout_height="44dp" android:layout_marginStart="8dp" android:gravity="center" android:text="稍后" android:textSize="14sp" android:textColor="#FFFFFF" android:background="@drawable/course_reminder_action" android:contentDescription="稍后提醒，使用已设置间隔" />
+    <TextView android:id="@+id/reminder_card_dismiss" android:layout_width="44dp" android:layout_height="44dp" android:layout_marginStart="8dp" android:gravity="center" android:text="×" android:textSize="27sp" android:textColor="#FFFFFF" android:background="@drawable/course_reminder_action" android:contentDescription="关闭本节课当前和后续提醒" />
+</LinearLayout>

@@ -4,6 +4,7 @@ import 'package:qinghe_timetable/features/timetable/domain/models.dart';
 
 void main() {
   final semester = Semester(
+    id: '2026-autumn',
     name: '2026 秋季学期',
     firstWeekStart: DateTime(2026, 9, 7),
     totalWeeks: 18,

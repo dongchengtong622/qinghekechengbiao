@@ -1,11 +1,29 @@
 import 'package:flutter/material.dart';
 
 import '../domain/models.dart';
+import '../domain/school_schedule.dart';
+
+typedef CourseTimePicker =
+    Future<TimeOfDay?> Function(BuildContext context, TimeOfDay initialTime);
 
 class CourseEditorPage extends StatefulWidget {
-  const CourseEditorPage({super.key, this.initialCourse, required this.onSave});
+  const CourseEditorPage({
+    super.key,
+    required this.semesterId,
+    this.initialCourse,
+    this.timePicker,
+    this.maxScheduleSection = 12,
+    this.schedule,
+    this.onSaveSharedTimes,
+    required this.onSave,
+  });
 
+  final String semesterId;
+  final int maxScheduleSection;
   final Course? initialCourse;
+  final CourseTimePicker? timePicker;
+  final SchoolSchedule? schedule;
+  final Future<void> Function(Course course)? onSaveSharedTimes;
   final Future<void> Function(Course course) onSave;
 
   @override
@@ -23,7 +41,15 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
   late final TextEditingController _endWeek;
   late int _weekday;
   late WeekPattern _pattern;
+  TimeOfDay? _startTime;
+  TimeOfDay? _endTime;
   bool _saving = false;
+  bool _timeChanged = false;
+  bool _sectionsChanged = false;
+  CourseTimeSource get _source => _sectionsChanged
+      ? CourseTimeSource.schedule
+      : _initialSession?.timeSource ?? CourseTimeSource.schedule;
+  int _colorValue = 0xFF2E7D66;
 
   CourseSession? get _initialSession =>
       widget.initialCourse?.sessions.isNotEmpty == true
@@ -34,6 +60,7 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
   void initState() {
     super.initState();
     final course = widget.initialCourse;
+    _colorValue = course?.colorValue ?? 0xFF2E7D66;
     final session = _initialSession;
     _name = TextEditingController(text: course?.name ?? '');
     _teacher = TextEditingController(text: course?.teacher ?? '');
@@ -46,6 +73,14 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
     _endWeek = TextEditingController(text: '${session?.endWeek ?? 18}');
     _weekday = session?.weekday ?? DateTime.monday;
     _pattern = session?.pattern ?? WeekPattern.everyWeek;
+    _startTime =
+        session != null && session.timeSource != CourseTimeSource.schedule
+        ? _timeOfDay(session.startMinute)
+        : null;
+    _endTime =
+        session != null && session.timeSource != CourseTimeSource.schedule
+        ? _timeOfDay(session.endMinute)
+        : null;
   }
 
   @override
@@ -68,16 +103,112 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
     return number != null && number > 0 ? null : '请输入大于 0 的数字';
   }
 
+  TimeOfDay? _timeOfDay(int? minute) => minute == null
+      ? null
+      : TimeOfDay(hour: minute ~/ 60, minute: minute % 60);
+
+  int? _minuteOfDay(TimeOfDay? time) =>
+      time == null ? null : time.hour * 60 + time.minute;
+
+  CourseSession? get _effectiveSession {
+    final start = _number(_startSection), end = _number(_endSection);
+    if (start < 1 || end < start) return null;
+    try {
+      return (widget.schedule ?? SchoolSchedule.defaults()).resolve(
+        CourseSession(
+          weekday: _weekday,
+          startSection: start,
+          endSection: end,
+          startWeek: 1,
+          endWeek: 1,
+          room: '',
+          pattern: WeekPattern.everyWeek,
+          startMinute: _timeChanged ? null : _minuteOfDay(_startTime),
+          endMinute: _timeChanged ? null : _minuteOfDay(_endTime),
+          timeSource: _timeChanged ? CourseTimeSource.schedule : _source,
+        ),
+        semesterId: widget.semesterId,
+      );
+    } on FormatException {
+      return null;
+    }
+  }
+
+  TimeOfDay? get _displayStart =>
+      _startTime ?? _timeOfDay(_effectiveSession?.startMinute);
+  TimeOfDay? get _displayEnd =>
+      _endTime ?? _timeOfDay(_effectiveSession?.endMinute);
+
+  String _timeLabel(TimeOfDay? time) {
+    if (time == null) return '请填写时间';
+    return '${time.hour.toString().padLeft(2, '0')}:'
+        '${time.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _selectTime({required bool start}) async {
+    final initial = start
+        ? _displayStart ?? const TimeOfDay(hour: 8, minute: 25)
+        : _displayEnd ?? const TimeOfDay(hour: 10, minute: 0);
+    final selected =
+        await (widget.timePicker ??
+            (context, initialTime) => showTimePicker(
+              context: context,
+              initialTime: initialTime,
+            ))(context, initial);
+    if (selected == null || !mounted) return;
+    setState(() {
+      _startTime ??= _timeOfDay(_effectiveSession?.startMinute);
+      _endTime ??= _timeOfDay(_effectiveSession?.endMinute);
+      _timeChanged = true;
+      if (start) {
+        _startTime = selected;
+      } else {
+        _endTime = selected;
+      }
+    });
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final startMinute = _minuteOfDay(_startTime);
+    final endMinute = _minuteOfDay(_endTime);
+    if (_timeChanged && startMinute == null && endMinute != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先选择开始时间')));
+      return;
+    }
+    if (_timeChanged && (startMinute == null || endMinute == null)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请填写完整的开始和结束时间')));
+      return;
+    }
+    if (startMinute != null && endMinute != null && endMinute <= startMinute) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('结束时间必须晚于开始时间')));
+      return;
+    }
+    if (_number(_endSection) > widget.maxScheduleSection &&
+        startMinute == null &&
+        _effectiveSession?.startMinute == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('该节次没有默认作息，请填写开始时间')));
+      return;
+    }
     setState(() => _saving = true);
     final course = Course(
       id:
           widget.initialCourse?.id ??
           'course-${DateTime.now().microsecondsSinceEpoch}',
+      semesterId: widget.initialCourse?.semesterId ?? widget.semesterId,
+      source: widget.initialCourse?.source ?? CourseSource.manual,
+      externalId: widget.initialCourse?.externalId,
       name: _name.text.trim(),
       teacher: _teacher.text.trim(),
-      colorValue: widget.initialCourse?.colorValue ?? 0xFF2E7D66,
+      colorValue: _colorValue,
       sessions: [
         CourseSession(
           weekday: _weekday,
@@ -87,12 +218,30 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
           endWeek: _number(_endWeek),
           pattern: _pattern,
           room: _room.text.trim(),
+          startMinute: startMinute,
+          endMinute: endMinute,
+          timeSource: _timeChanged ? CourseTimeSource.custom : _source,
         ),
+        ...?widget.initialCourse?.sessions.skip(1),
       ],
     );
     try {
-      await widget.onSave(course);
+      await (_timeChanged
+          ? widget.onSaveSharedTimes ?? widget.onSave
+          : widget.onSave)(course);
       if (mounted) await Navigator.of(context).maybePop();
+    } on FormatException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('保存失败，请重试。')));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -115,6 +264,28 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final color in const [
+                  0xFF2E7D66,
+                  0xFF6366A8,
+                  0xFFD77855,
+                  0xFF9A6BB5,
+                  0xFF3978A8,
+                  0xFFB46A7A,
+                ])
+                  ChoiceChip(
+                    label: const Text(''),
+                    avatar: CircleAvatar(
+                      backgroundColor: Color(color),
+                      radius: 10,
+                    ),
+                    selected: _colorValue == color,
+                    onSelected: (_) => setState(() => _colorValue = color),
+                  ),
+              ],
+            ),
             TextFormField(
               key: const Key('course_name'),
               controller: _name,
@@ -151,9 +322,42 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
             Row(
               children: [
                 Expanded(
+                  child: ListTile(
+                    key: const Key('start_time'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('开始时间'),
+                    subtitle: Text(_timeLabel(_displayStart)),
+                    trailing: const Icon(Icons.schedule_rounded),
+                    onTap: () => _selectTime(start: true),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ListTile(
+                    key: const Key('end_time'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('结束时间'),
+                    subtitle: Text(_timeLabel(_displayEnd)),
+                    trailing: const Icon(Icons.schedule_rounded),
+                    onTap: () => _selectTime(start: false),
+                  ),
+                ),
+              ],
+            ),
+            const Text('手动修改时间并保存后，本学期相同开始和结束节次的课程会同步。'),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
                   child: TextFormField(
                     key: const Key('start_section'),
                     controller: _startSection,
+                    onChanged: (_) => setState(() {
+                      _sectionsChanged = true;
+                      _startTime = null;
+                      _endTime = null;
+                      _timeChanged = false;
+                    }),
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: '开始节次'),
                     validator: _positiveNumber,
@@ -164,6 +368,12 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                   child: TextFormField(
                     key: const Key('end_section'),
                     controller: _endSection,
+                    onChanged: (_) => setState(() {
+                      _sectionsChanged = true;
+                      _startTime = null;
+                      _endTime = null;
+                      _timeChanged = false;
+                    }),
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: '结束节次'),
                     validator: (value) {

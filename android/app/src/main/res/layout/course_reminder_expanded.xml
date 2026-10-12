@@ -1,0 +1,8 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="#F3F9F6">
+    <TextView android:id="@+id/reminder_compact_name" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="16sp" android:textStyle="bold" android:textColor="#214D3E" android:maxLines="2" />
+    <TextView android:id="@+id/reminder_compact_time" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="#214D3E" android:maxLines="2" />
+    <TextView android:id="@+id/reminder_compact_room" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="#38594B" android:maxLines="3" />
+    <TextView android:id="@+id/reminder_compact_teacher" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="#38594B" android:maxLines="2" />
+    <TextView android:id="@+id/reminder_expanded_extra" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="#38594B" android:maxLines="3" />
+</LinearLayout>

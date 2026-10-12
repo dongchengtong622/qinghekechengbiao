@@ -1,0 +1,46 @@
+name: Publish latest APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-latest.yml'
+      - 'releases/v1.0.5/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify APK checksum
+        run: |
+          echo "2cbe0a4adc1c365ff627d3ee408dfe37e57a782fe33117916c342c8d00483659  releases/v1.0.5/qinghe-timetable-v1.0.5-arm64.apk" | sha256sum --check
+      - name: Publish V1.0.5
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v1.0.5 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload v1.0.5 releases/v1.0.5/qinghe-timetable-v1.0.5-arm64.apk --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create v1.0.5 releases/v1.0.5/qinghe-timetable-v1.0.5-arm64.apk --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "青禾课表 V1.0.5" --notes-file VERSION.md --latest
+          fi
+      - name: Remove superseded branches after publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cleanup_branch() {
+            local branch="$1" expected="$2" current
+            current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha')
+            if [ "$current" != "$expected" ]; then
+              echo "Branch changed since inspection; keeping $branch"
+              exit 1
+            fi
+            gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$branch"
+          }
+          cleanup_branch codex/apk-v1.0.5 55b75f958ff052331cf36674df505127cc029778
+          cleanup_branch codex/course-import-reminders a2069b8104c341afc76e48ef9446038bbf8e2444

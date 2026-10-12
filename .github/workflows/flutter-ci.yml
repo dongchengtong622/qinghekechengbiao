@@ -14,14 +14,11 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: 3.47.5
           cache: true
 
-      - name: Generate platform projects
-        run: |
-          flutter create --platforms=android,ios --org com.qinghe --project-name qinghe_timetable .platform_template
-          cp -R .platform_template/android ./android
-          cp -R .platform_template/ios ./ios
+      - name: Verify checked-in Android project
+        run: test -f android/app/src/main/AndroidManifest.xml
 
       - name: Install dependencies
         run: flutter pub get
@@ -30,18 +27,44 @@ jobs:
         run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Check formatting
-        run: dart format --output=none --set-exit-if-changed lib test tool
+        run: |
+          dart format lib test tool
+          git diff --exit-code -- '*.dart'
 
       - name: Analyze
         run: flutter analyze
 
       - name: Test
-        run: flutter test
+        run: timeout 10m flutter test --reporter expanded
 
-      - name: Build Android debug APK
-        run: flutter build apk --debug
+      - name: Build Android release artifacts
+        run: |
+          mkdir -p build/release-artifacts
+          flutter build apk --release
+          cp build/app/outputs/flutter-apk/app-release.apk build/release-artifacts/qinghe-timetable-1.0.5-universal.apk
+          flutter build apk --release --target-platform android-arm64
+          cp build/app/outputs/flutter-apk/app-release.apk build/release-artifacts/qinghe-timetable-1.0.5-arm64.apk
+          flutter build appbundle --release
+          cp build/app/outputs/bundle/release/app-release.aab build/release-artifacts/qinghe-timetable-1.0.5.aab
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload universal APK
+        uses: actions/upload-artifact@v4
         with:
-          name: qinghe-timetable-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: qinghe-timetable-1.0.5-universal-apk
+          path: build/release-artifacts/qinghe-timetable-1.0.5-universal.apk
+
+      - name: Upload arm64 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: qinghe-timetable-1.0.5-arm64-apk
+          path: build/release-artifacts/qinghe-timetable-1.0.5-arm64.apk
+
+      - name: Upload Android App Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: qinghe-timetable-1.0.5-aab
+          path: build/release-artifacts/qinghe-timetable-1.0.5.aab
+
+
+
+

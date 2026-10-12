@@ -1,7 +1,7 @@
 name: qinghe_timetable
 description: 青禾课表——面向大学生的跨平台智能课程表。
 publish_to: none
-version: 0.1.0+1
+version: 1.0.5+18
 
 environment:
   sdk: ^3.10.0
@@ -9,10 +9,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  archive: ^4.0.9
   cupertino_icons: ^1.0.8
   drift: ^2.35.0
   drift_flutter: ^0.3.1
+  excel_plus: 2.23.0
+  html: ^0.15.6
+  xml: ^7.0.1
+  enough_convert: ^1.7.1
+  file_picker: ^13.1.0
+  flutter_local_notifications: ^22.3.1
   path_provider: ^2.1.6
+  timezone: ^0.11.1
 
 dev_dependencies:
   flutter_test:
@@ -23,3 +31,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/templates/qinghe_timetable_template.xlsx
+    - assets/holidays/china_2026.json
+
+
+

@@ -5,21 +5,172 @@ import 'package:qinghe_timetable/features/timetable/domain/models.dart';
 import 'package:qinghe_timetable/features/timetable/presentation/timetable_page.dart';
 
 void main() {
+  testWidgets(
+    'editing a later card selects its session and keeps other sessions',
+    (tester) async {
+      final first = sampleCourses.first;
+      Course? selected;
+      final course = Course(
+        id: first.id,
+        semesterId: first.semesterId,
+        source: first.source,
+        name: first.name,
+        teacher: first.teacher,
+        colorValue: first.colorValue,
+        sessions: [
+          first.sessions.first,
+          const CourseSession(
+            weekday: 1,
+            startSection: 5,
+            endSection: 6,
+            startWeek: 1,
+            endWeek: 18,
+            pattern: WeekPattern.everyWeek,
+            room: 'B302',
+            startMinute: 820,
+            endMinute: 915,
+            timeSource: CourseTimeSource.schedule,
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TimetablePage(
+            semester: sampleSemester,
+            courses: [course],
+            initialDisplayWeek: 3,
+            currentWeek: 3,
+            now: DateTime(2026, 9, 21),
+            onEdit: (c) => selected = c,
+          ),
+        ),
+      );
+      await tester.tap(find.text(first.name).last);
+      expect(selected!.sessions.first.startSection, 5);
+      expect(selected!.sessions.first.timeLabel, '13:40–15:15');
+      expect(selected!.sessions, hasLength(2));
+    },
+  );
   testWidgets('shows semester and course details', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: TimetablePage(
           semester: sampleSemester,
           courses: sampleCourses,
-          displayWeek: 3,
+          initialDisplayWeek: 3,
+          now: DateTime(2026, 9, 21),
+          currentWeek: 3,
         ),
       ),
     );
 
-    expect(find.text('青禾课表'), findsOneWidget);
-    expect(find.text('2026 秋季学期 · 第 3 周'), findsOneWidget);
+    expect(find.text('青禾课表'), findsNothing);
+    expect(find.text('2026 秋季学期'), findsNothing);
+    expect(find.text('第 3 周'), findsOneWidget);
     expect(find.text('高等数学'), findsOneWidget);
     expect(find.textContaining('A302'), findsOneWidget);
+  });
+
+  testWidgets('selects any semester week and returns to the current week', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimetablePage(
+          semester: sampleSemester,
+          courses: sampleCourses,
+          initialDisplayWeek: 3,
+          now: DateTime(2026, 9, 21),
+          currentWeek: 3,
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('week_selector')));
+    await tester.pumpAndSettle();
+    expect(find.text('第 1 周'), findsOneWidget);
+    expect(find.text('第 18 周'), findsOneWidget);
+    await tester.tap(find.text('第 5 周').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('第 5 周'), findsOneWidget);
+    expect(find.byKey(const Key('return_to_current_week')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('return_to_current_week')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('第 3 周'), findsOneWidget);
+    expect(find.byKey(const Key('return_to_current_week')), findsNothing);
+  });
+
+  testWidgets('resets the selected week when the semester changes', (
+    tester,
+  ) async {
+    Widget page(Semester semester, int week) => MaterialApp(
+      home: TimetablePage(
+        semester: semester,
+        courses: const [],
+        initialDisplayWeek: week,
+        currentWeek: week,
+      ),
+    );
+
+    await tester.pumpWidget(page(sampleSemester, 3));
+    await tester.tap(find.byKey(const Key('week_selector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('第 5 周').last);
+    await tester.pumpAndSettle();
+
+    final nextSemester = Semester(
+      id: 'sample-2027-spring',
+      name: '2027 春季学期',
+      firstWeekStart: DateTime(2027, 2, 22),
+      totalWeeks: 4,
+    );
+    await tester.pumpWidget(page(nextSemester, 2));
+    await tester.pumpAndSettle();
+
+    expect(find.text('第 2 周'), findsOneWidget);
+    expect(find.byKey(const Key('return_to_current_week')), findsNothing);
+  });
+
+  testWidgets('shows a course custom time range', (tester) async {
+    final original = sampleCourses.first;
+    final session = original.sessions.first;
+    final custom = Course(
+      id: original.id,
+      semesterId: original.semesterId,
+      source: original.source,
+      name: original.name,
+      teacher: original.teacher,
+      colorValue: original.colorValue,
+      sessions: [
+        CourseSession(
+          weekday: session.weekday,
+          startSection: session.startSection,
+          endSection: session.endSection,
+          startWeek: session.startWeek,
+          endWeek: session.endWeek,
+          pattern: session.pattern,
+          room: session.room,
+          startMinute: 9 * 60 + 40,
+          endMinute: 11 * 60 + 15,
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimetablePage(
+          semester: sampleSemester,
+          courses: [custom],
+          initialDisplayWeek: 3,
+          now: DateTime(2026, 9, 21),
+          currentWeek: 3,
+        ),
+      ),
+    );
+
+    expect(find.textContaining('09:40–11:15'), findsOneWidget);
   });
 
   testWidgets('invokes add and edit actions', (tester) async {
@@ -30,7 +181,9 @@ void main() {
         home: TimetablePage(
           semester: sampleSemester,
           courses: sampleCourses,
-          displayWeek: 3,
+          initialDisplayWeek: 3,
+          now: DateTime(2026, 9, 21),
+          currentWeek: 3,
           onAdd: () => added = true,
           onEdit: (course) => edited = course,
         ),
@@ -44,6 +197,58 @@ void main() {
     expect(edited?.id, 'math');
   });
 
+  testWidgets('exposes import and reminder actions in the header', (
+    tester,
+  ) async {
+    var imported = false;
+    var remindersOpened = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimetablePage(
+          semester: sampleSemester,
+          courses: sampleCourses,
+          initialDisplayWeek: 3,
+          now: DateTime(2026, 9, 21),
+          currentWeek: 3,
+          onImport: () => imported = true,
+          onReminders: () => remindersOpened = true,
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('home_more')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('导入课表'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('home_more')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('课程提醒'));
+    await tester.pumpAndSettle();
+
+    expect(imported, isTrue);
+    expect(remindersOpened, isTrue);
+  });
+
+  testWidgets('shows enabled reminder state in the header', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimetablePage(
+          semester: sampleSemester,
+          courses: sampleCourses,
+          initialDisplayWeek: 3,
+          now: DateTime(2026, 9, 21),
+          currentWeek: 3,
+          remindersEnabled: true,
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('home_more')));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('提醒已开启'), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_active_rounded), findsOneWidget);
+  });
+
   testWidgets('confirms before deleting a course', (tester) async {
     Course? deleted;
     await tester.pumpWidget(
@@ -51,7 +256,9 @@ void main() {
         home: TimetablePage(
           semester: sampleSemester,
           courses: sampleCourses,
-          displayWeek: 3,
+          initialDisplayWeek: 3,
+          now: DateTime(2026, 9, 21),
+          currentWeek: 3,
           onDelete: (course) => deleted = course,
         ),
       ),

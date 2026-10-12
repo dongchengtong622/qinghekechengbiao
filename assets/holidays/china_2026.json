@@ -1,0 +1,162 @@
+{
+  "code": 0,
+  "source": "https://www.gov.cn/zhengce/zhengceku/202511/content_7047091.htm",
+  "holiday": {
+    "01-01": {
+      "holiday": true,
+      "name": "元旦"
+    },
+    "01-02": {
+      "holiday": true,
+      "name": "元旦"
+    },
+    "01-03": {
+      "holiday": true,
+      "name": "元旦"
+    },
+    "01-04": {
+      "holiday": false,
+      "name": "元旦调休"
+    },
+    "02-14": {
+      "holiday": false,
+      "name": "春节调休"
+    },
+    "02-15": {
+      "holiday": true,
+      "name": "春节"
+    },
+    "02-16": {
+      "holiday": true,
+      "name": "春节"
+    },
+    "02-17": {
+      "holiday": true,
+      "name": "春节"
+    },
+    "02-18": {
+      "holiday": true,
+      "name": "春节"
+    },
+    "02-19": {
+      "holiday": true,
+      "name": "春节"
+    },
+    "02-20": {
+      "holiday": true,
+      "name": "春节"
+    },
+    "02-21": {
+      "holiday": true,
+      "name": "春节"
+    },
+    "02-22": {
+      "holiday": true,
+      "name": "春节"
+    },
+    "02-23": {
+      "holiday": true,
+      "name": "春节"
+    },
+    "02-28": {
+      "holiday": false,
+      "name": "春节调休"
+    },
+    "04-04": {
+      "holiday": true,
+      "name": "清明节"
+    },
+    "04-05": {
+      "holiday": true,
+      "name": "清明节"
+    },
+    "04-06": {
+      "holiday": true,
+      "name": "清明节"
+    },
+    "05-01": {
+      "holiday": true,
+      "name": "劳动节"
+    },
+    "05-02": {
+      "holiday": true,
+      "name": "劳动节"
+    },
+    "05-03": {
+      "holiday": true,
+      "name": "劳动节"
+    },
+    "05-04": {
+      "holiday": true,
+      "name": "劳动节"
+    },
+    "05-05": {
+      "holiday": true,
+      "name": "劳动节"
+    },
+    "05-09": {
+      "holiday": false,
+      "name": "劳动节调休"
+    },
+    "06-19": {
+      "holiday": true,
+      "name": "端午节"
+    },
+    "06-20": {
+      "holiday": true,
+      "name": "端午节"
+    },
+    "06-21": {
+      "holiday": true,
+      "name": "端午节"
+    },
+    "09-20": {
+      "holiday": false,
+      "name": "国庆节调休"
+    },
+    "09-25": {
+      "holiday": true,
+      "name": "中秋节"
+    },
+    "09-26": {
+      "holiday": true,
+      "name": "中秋节"
+    },
+    "09-27": {
+      "holiday": true,
+      "name": "中秋节"
+    },
+    "10-01": {
+      "holiday": true,
+      "name": "国庆节"
+    },
+    "10-02": {
+      "holiday": true,
+      "name": "国庆节"
+    },
+    "10-03": {
+      "holiday": true,
+      "name": "国庆节"
+    },
+    "10-04": {
+      "holiday": true,
+      "name": "国庆节"
+    },
+    "10-05": {
+      "holiday": true,
+      "name": "国庆节"
+    },
+    "10-06": {
+      "holiday": true,
+      "name": "国庆节"
+    },
+    "10-07": {
+      "holiday": true,
+      "name": "国庆节"
+    },
+    "10-10": {
+      "holiday": false,
+      "name": "国庆节调休"
+    }
+  }
+}

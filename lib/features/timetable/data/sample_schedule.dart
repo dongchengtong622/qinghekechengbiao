@@ -1,6 +1,7 @@
 import '../domain/models.dart';
 
 final sampleSemester = Semester(
+  id: 'sample-2026-autumn',
   name: '2026 秋季学期',
   firstWeekStart: DateTime(2026, 9, 7),
   totalWeeks: 18,
@@ -9,6 +10,8 @@ final sampleSemester = Semester(
 const sampleCourses = <Course>[
   Course(
     id: 'math',
+    semesterId: 'sample-2026-autumn',
+    source: CourseSource.manual,
     name: '高等数学',
     teacher: '陈老师',
     colorValue: 0xFF2E7D66,
@@ -26,6 +29,8 @@ const sampleCourses = <Course>[
   ),
   Course(
     id: 'design',
+    semesterId: 'sample-2026-autumn',
+    source: CourseSource.manual,
     name: '设计基础',
     teacher: '李老师',
     colorValue: 0xFF6366A8,
@@ -43,6 +48,8 @@ const sampleCourses = <Course>[
   ),
   Course(
     id: 'english',
+    semesterId: 'sample-2026-autumn',
+    source: CourseSource.manual,
     name: '大学英语',
     teacher: '王老师',
     colorValue: 0xFFD77855,

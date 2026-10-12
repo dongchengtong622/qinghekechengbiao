@@ -3,6 +3,22 @@ import 'package:qinghe_timetable/features/timetable/domain/models.dart';
 
 void main() {
   group('WeekPattern', () {
+    test('formats optional custom class times', () {
+      const session = CourseSession(
+        weekday: DateTime.monday,
+        startSection: 1,
+        endSection: 2,
+        startWeek: 1,
+        endWeek: 18,
+        pattern: WeekPattern.everyWeek,
+        room: 'A101',
+        startMinute: 9 * 60 + 40,
+        endMinute: 11 * 60 + 15,
+      );
+
+      expect(session.timeLabel, '09:40–11:15');
+    });
+
     test('every week accepts all weeks in range', () {
       final session = CourseSession(
         weekday: DateTime.monday,
@@ -49,6 +65,7 @@ void main() {
 
   group('Semester', () {
     final semester = Semester(
+      id: '2026-autumn',
       name: '2026 秋季学期',
       firstWeekStart: DateTime(2026, 9, 7),
       totalWeeks: 18,
